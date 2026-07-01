@@ -4,19 +4,21 @@
 
 ```text
 .
+├── README.md              # public project overview
+├── AGENTS.md              # agent harness
+├── TODO.md                # 앞으로 해야 할 일만
 ├── src/recruit_crawler/   # CLI, pipeline, parser, registry, source adapters
 ├── tests/                 # unittest 검증
 ├── fixtures/              # parser/import 회귀 샘플
 ├── config/                # sample/live source 설정
 ├── docs/                  # 운영·source access 문서
 │   └── archive/           # 완료 작업, 상태 스냅샷, 검증 이력
-├── browser_extension/     # 수동 캡처/import 보조 도구
-└── TODO.md                # 앞으로 해야 할 일만
+└── browser_extension/     # 수동 캡처/import 보조 도구
 ```
 
 - 새 파일은 위 구조 중 가장 가까운 기존 디렉토리에 둔다.
 - 불필요한 새 최상위 디렉토리, 중복 문서, 임시 산출물은 만들지 않는다.
-- `README.md`는 두지 않는다. 에이전트 하네스는 이 파일, 사람용 진행상황은 `TODO.md`에 둔다.
+- `README.md`는 허황되지 않은 영어 project overview만 둔다. 에이전트 하네스는 `AGENTS.md`, 사람용 backlog는 `TODO.md`에 둔다.
 
 ## GJC 작업 기록
 

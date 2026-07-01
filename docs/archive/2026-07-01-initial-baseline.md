@@ -33,4 +33,4 @@ PYTHONPATH=src python3 -m recruit_crawler.cli live-run --config config/live_sour
 
 - `TODO.md`는 앞으로 해야 할 일만 유지한다.
 - 완료 항목, 상태 스냅샷, 검증 이력은 `docs/archive/`에 보관한다.
-- `README.md`는 두지 않는다.
+- Initial baseline 이후 `README.md`는 미니멀한 영어 project overview로 다시 둔다.
