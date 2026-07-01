@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from .schemas import AppConfig, Profile, ScoringWeights, SourceManifest, Thresholds
+from .user_context import context_from_profile
 from .source_registry import SourceRegistryError, validate_source_registry
 
 
@@ -118,5 +119,6 @@ def load_config(path: Path, *, allow_real_sources: bool = False) -> AppConfig:
         thresholds=thresholds,
         scoring_weights=weights,
         profile=profile,
+        user_context=context_from_profile(profile),
         sources=sources,
     )

@@ -12,6 +12,7 @@ from .capture_import import (
     import_capture_files,
     select_capture_files,
 )
+from .browser_evidence import build_browser_evidence, write_browser_evidence
 from .config import ConfigError, load_config
 from .source_registry import source_status_rows
 from .pipeline import run_capture_import, run_dry_run, run_live_run
@@ -51,6 +52,12 @@ def build_parser() -> argparse.ArgumentParser:
     capture_gate.add_argument("--latest", action="store_true", help="validate the latest YYYY-MM-DD capture directory")
     capture_gate.add_argument("--file", dest="files", type=Path, action="append", help="specific capture JSON file; repeatable")
     capture_gate.add_argument("--output", type=Path, required=True, help="path to write quality gate JSON")
+    browser_evidence = subparsers.add_parser("browser-evidence", help="capture Chrome/Chromium DOM evidence transcript")
+    browser_evidence.add_argument("--config", type=Path, default=Path("config/live_sources.sample.json"))
+    browser_evidence.add_argument("--source-id", required=True)
+    browser_evidence.add_argument("--target-url")
+    browser_evidence.add_argument("--fixture-html", type=Path)
+    browser_evidence.add_argument("--output", type=Path, required=True)
     return parser
 
 
@@ -141,6 +148,25 @@ def main(argv: Optional[list[str]] = None) -> int:
         print(f"Quality gate written: {args.output}")
         print(f"Quality gate status: {gate['status']}")
         return 0
+
+    if args.command == "browser-evidence":
+        try:
+            config = load_config(args.config, allow_real_sources=True)
+            manifest = next((source for source in config.sources if source.source_id == args.source_id), None)
+            if manifest is None:
+                raise ConfigError(f"unknown source_id: {args.source_id}")
+            transcript = build_browser_evidence(
+                manifest,
+                fixture_html=args.fixture_html,
+                target_url=args.target_url,
+            )
+            write_browser_evidence(transcript, args.output)
+        except (ConfigError, ValueError, FileNotFoundError) as exc:
+            parser.error(str(exc))
+            return 2
+        print(f"Browser evidence written: {args.output}")
+        print(f"Browser evidence status: {'passed' if transcript['exit_code'] == 0 else 'failed'}")
+        return int(transcript["exit_code"])
     parser.error(f"unknown command: {args.command}")
     return 2
 

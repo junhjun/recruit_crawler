@@ -755,6 +755,264 @@
         "docs/source_access_reviews.md",
         "docs/source_search_logic.md"
       ]
+    },
+    {
+      "source_id": "naver_careers",
+      "enabled": false,
+      "access_mode": "public_page",
+      "auth_required": false,
+      "tos_review_status": "pass",
+      "domains": [
+        "recruit.navercorp.com"
+      ],
+      "rate_limit": "1 request / second after public source review",
+      "failure_mode": "skip_source",
+      "allowed_persisted_fields": [
+        "source_id",
+        "source_url",
+        "title",
+        "company",
+        "location",
+        "deadline",
+        "structured_snapshot"
+      ],
+      "display_name": "NAVER Careers",
+      "v1_role": "company_careers_selected",
+      "target_status": "deferred",
+      "maintenance_status": "watch",
+      "target_lane": null,
+      "candidate_lanes": [
+        "public_http"
+      ],
+      "automation_level": "no_human_candidate",
+      "status_reason": "Reviewed in the 4-candidate company-careers gate, but live public HTTP probing produced 0 candidates with the generic adapter; keep deferred until a source-specific AJAX/detail parser produces persisted candidates.",
+      "evidence": [
+        "docs/source_access_reviews.md#company-careers-v1-gate",
+        "docs/source_collection_matrix.md#company-careers-v1-gate",
+        "tests/test_dry_run.py::SourceCandidateSelectionTests"
+      ],
+      "blockers": [
+        "generic PublicJobsHttpAdapter does not collect candidates from current listing flow"
+      ],
+      "next_action": "Implement a NAVER-specific loadJobList/detail parser and enable only after live candidate evidence is non-zero.",
+      "adapter_code_path": "src/recruit_crawler/sources/http.py::PublicJobsHttpAdapter",
+      "test_refs": [
+        "tests/test_dry_run.py::test_company_careers_gate_keeps_zero_candidate_targets_deferred"
+      ],
+      "docs_refs": [
+        "docs/source_access_reviews.md",
+        "docs/source_collection_matrix.md"
+      ],
+      "options": {
+        "start_urls": [
+          "https://recruit.navercorp.com/rcrt/list.do?subJobCdArr=1010001"
+        ],
+        "search_urls": [
+          "https://recruit.navercorp.com/rcrt/list.do?subJobCdArr=1010001"
+        ],
+        "require_robots": false,
+        "explicit_automated_permission": true,
+        "include_url_patterns": [
+          "/rcrt/",
+          "job",
+          "recruit"
+        ],
+        "exclude_url_patterns": [
+          "login",
+          "apply",
+          "privacy"
+        ],
+        "candidate_include_keywords": [
+          "AI",
+          "ML",
+          "Machine Learning",
+          "Data",
+          "Python",
+          "Backend",
+          "검색",
+          "추천",
+          "데이터"
+        ],
+        "max_pages": 20,
+        "delay_seconds": 1
+      }
+    },
+    {
+      "source_id": "kakao_careers",
+      "enabled": false,
+      "access_mode": "public_page",
+      "auth_required": false,
+      "tos_review_status": "pass",
+      "domains": [
+        "careers.kakao.com"
+      ],
+      "rate_limit": "1 request / second after public source review",
+      "failure_mode": "skip_source",
+      "allowed_persisted_fields": [
+        "source_id",
+        "source_url",
+        "title",
+        "company",
+        "location",
+        "deadline",
+        "structured_snapshot"
+      ],
+      "display_name": "Kakao Careers",
+      "v1_role": "company_careers_selected",
+      "target_status": "deferred",
+      "maintenance_status": "watch",
+      "target_lane": null,
+      "candidate_lanes": [
+        "public_http"
+      ],
+      "automation_level": "no_human_candidate",
+      "status_reason": "Reviewed in the 4-candidate company-careers gate, but the careers page is SPA-rendered and live public HTTP probing produced 0 candidates with the generic adapter; keep deferred until a source-specific API/detail parser produces persisted candidates.",
+      "evidence": [
+        "docs/source_access_reviews.md#company-careers-v1-gate",
+        "docs/source_collection_matrix.md#company-careers-v1-gate",
+        "tests/test_dry_run.py::SourceCandidateSelectionTests"
+      ],
+      "blockers": [
+        "generic PublicJobsHttpAdapter does not collect candidates from current SPA listing flow"
+      ],
+      "next_action": "Implement a Kakao-specific SPA/API/detail parser and enable only after live candidate evidence is non-zero.",
+      "adapter_code_path": "src/recruit_crawler/sources/http.py::PublicJobsHttpAdapter",
+      "test_refs": [
+        "tests/test_dry_run.py::test_company_careers_gate_keeps_zero_candidate_targets_deferred"
+      ],
+      "docs_refs": [
+        "docs/source_access_reviews.md",
+        "docs/source_collection_matrix.md"
+      ],
+      "options": {
+        "start_urls": [
+          "https://careers.kakao.com/jobs?skillSet=Python"
+        ],
+        "search_urls": [
+          "https://careers.kakao.com/jobs?skillSet=Python"
+        ],
+        "require_robots": false,
+        "explicit_automated_permission": true,
+        "include_url_patterns": [
+          "/jobs/",
+          "job",
+          "careers"
+        ],
+        "exclude_url_patterns": [
+          "login",
+          "apply",
+          "privacy"
+        ],
+        "candidate_include_keywords": [
+          "AI",
+          "ML",
+          "Machine Learning",
+          "Data",
+          "Python",
+          "Backend",
+          "검색",
+          "추천",
+          "데이터"
+        ],
+        "max_pages": 20,
+        "delay_seconds": 1
+      }
+    },
+    {
+      "source_id": "line_careers",
+      "enabled": false,
+      "access_mode": "public_page",
+      "auth_required": false,
+      "tos_review_status": "pass",
+      "domains": [
+        "careers.linecorp.com"
+      ],
+      "rate_limit": "1 request / second if enabled",
+      "failure_mode": "skip_source",
+      "allowed_persisted_fields": [
+        "source_id",
+        "source_url",
+        "title",
+        "company",
+        "location",
+        "deadline",
+        "structured_snapshot"
+      ],
+      "display_name": "LINE Careers",
+      "v1_role": "company_careers_fallback",
+      "target_status": "deferred",
+      "maintenance_status": "watch",
+      "target_lane": null,
+      "candidate_lanes": [
+        "public_http"
+      ],
+      "automation_level": "no_human",
+      "status_reason": "Fallback from 4-candidate gate; public careers pages appear filterable but not selected for V1 count.",
+      "evidence": [
+        "docs/source_access_reviews.md#company-careers-v1-gate"
+      ],
+      "blockers": [],
+      "next_action": "Enable only if a selected company-careers target fails.",
+      "adapter_code_path": "",
+      "test_refs": [],
+      "docs_refs": [
+        "docs/source_access_reviews.md"
+      ],
+      "options": {
+        "start_urls": [
+          "https://careers.linecorp.com/jobs"
+        ],
+        "require_robots": false,
+        "explicit_automated_permission": true
+      }
+    },
+    {
+      "source_id": "coupang_careers",
+      "enabled": false,
+      "access_mode": "public_page",
+      "auth_required": false,
+      "tos_review_status": "pass",
+      "domains": [
+        "www.coupang.jobs"
+      ],
+      "rate_limit": "1 request / second if enabled",
+      "failure_mode": "skip_source",
+      "allowed_persisted_fields": [
+        "source_id",
+        "source_url",
+        "title",
+        "company",
+        "location",
+        "deadline",
+        "structured_snapshot"
+      ],
+      "display_name": "Coupang Careers",
+      "v1_role": "company_careers_fallback",
+      "target_status": "deferred",
+      "maintenance_status": "watch",
+      "target_lane": null,
+      "candidate_lanes": [
+        "public_http"
+      ],
+      "automation_level": "no_human",
+      "status_reason": "Fallback from 4-candidate gate; public careers pages are accessible but selected set remains NAVER/Kakao.",
+      "evidence": [
+        "docs/source_access_reviews.md#company-careers-v1-gate"
+      ],
+      "blockers": [],
+      "next_action": "Enable only if a selected company-careers target fails.",
+      "adapter_code_path": "",
+      "test_refs": [],
+      "docs_refs": [
+        "docs/source_access_reviews.md"
+      ],
+      "options": {
+        "start_urls": [
+          "https://www.coupang.jobs/en/jobs/"
+        ],
+        "require_robots": false,
+        "explicit_automated_permission": true
+      }
     }
   ]
 }

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Iterable, List, Sequence, Tuple
+from typing import Iterable, List, Sequence
 
-from .schemas import AppConfig, FitAssessment, JDSnapshot, Profile
+from .schemas import AppConfig, FitAssessment, JDSnapshot, Profile, UserContext
+from .user_context import missing_context_fields, profile_from_context
 
 
 def is_expired(snapshot: JDSnapshot, run_date: date) -> bool:
@@ -14,7 +15,7 @@ def exceeds_experience_limit(snapshot: JDSnapshot, config: AppConfig) -> bool:
     minimum = snapshot.minimum_experience_years
     if minimum is None:
         return False
-    return minimum > config.profile.max_experience_years
+    return minimum > config.user_context.max_experience_years
 
 
 def _contains_skill(text: str, skill: str) -> bool:
@@ -50,6 +51,33 @@ def _ratio(matches: Sequence[str], total: int) -> float:
     return len(matches) / total
 
 
+def _verdict_from_recommendation(recommendation: str) -> str:
+    if recommendation == "apply":
+        return "include"
+    if recommendation == "hold":
+        return "hold"
+    return "exclude"
+
+
+def _snapshot_text(snapshot: JDSnapshot) -> str:
+    return " ".join(
+        [
+            snapshot.title,
+            snapshot.company,
+            snapshot.location,
+            *snapshot.required_qualifications,
+            *snapshot.preferred_qualifications,
+            *snapshot.responsibilities,
+            *snapshot.company_info,
+            *snapshot.manual_review_flags,
+        ]
+    ).lower()
+
+
+def deal_breaker_hits(snapshot: JDSnapshot, context: UserContext) -> List[str]:
+    text = _snapshot_text(snapshot)
+    return [item for item in context.explicit_deal_breakers if item and item.lower() in text]
+
 def _recommendation(score: int, config: AppConfig) -> str:
     if score >= config.thresholds.apply:
         return "apply"
@@ -59,12 +87,15 @@ def _recommendation(score: int, config: AppConfig) -> str:
 
 
 def score_snapshot(snapshot: JDSnapshot, config: AppConfig) -> FitAssessment:
-    profile = config.profile
+    context = config.user_context
+    profile = profile_from_context(context)
     required_matches = _match_terms(snapshot.required_qualifications, profile)
     preferred_matches = _match_terms(snapshot.preferred_qualifications, profile)
     responsibility_matches = _match_terms(snapshot.responsibilities, profile)
     company_matches = _match_terms(snapshot.company_info, profile)
     location_match = _location_matches(snapshot.location, profile.preferred_locations)
+    missing_context_signals = missing_context_fields(context)
+    deal_breakers = deal_breaker_hits(snapshot, context)
 
     weights = config.scoring_weights
     score = round(
@@ -103,6 +134,10 @@ def score_snapshot(snapshot: JDSnapshot, config: AppConfig) -> FitAssessment:
     if snapshot.location and not location_match:
         risks.append(f"선호 근무지가 아닙니다: {snapshot.location}")
 
+    if missing_context_signals:
+        risks.append("사용자 맥락이 부족해 보류 판단이 필요합니다: " + ", ".join(missing_context_signals))
+    if deal_breakers:
+        risks.append("명시적 제외 조건과 충돌합니다: " + ", ".join(deal_breakers))
     verification_questions = []
     if snapshot.deadline_uncertain:
         verification_questions.append("정확한 지원 마감일은 언제인가요?")
@@ -119,15 +154,27 @@ def score_snapshot(snapshot: JDSnapshot, config: AppConfig) -> FitAssessment:
         else "가장 가까운 관련 프로젝트 경험 중심으로 지원 포지셔닝"
     )
 
+    recommendation = _recommendation(score, config)
+    verdict = _verdict_from_recommendation(recommendation)
+    if missing_context_signals and verdict == "exclude":
+        recommendation = "hold"
+        verdict = "hold"
+    if deal_breakers:
+        recommendation = "low_priority"
+        verdict = "exclude"
+
     return FitAssessment(
         snapshot=snapshot,
         score=score,
-        recommendation=_recommendation(score, config),
+        recommendation=recommendation,
         matched_evidence=matched_evidence,
         gaps=gaps,
         risks=risks or ["구조화된 항목 기준 큰 위험 신호는 없습니다"],
         verification_questions=verification_questions,
         positioning_seed=positioning_seed,
+        verdict=verdict,
+        missing_context_signals=missing_context_signals,
+        deal_breaker_hits=deal_breakers,
     )
 
 

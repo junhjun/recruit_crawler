@@ -18,6 +18,16 @@ from recruit_crawler.cli import main as cli_main
 from recruit_crawler.capture_import import build_capture_quality_gate, import_capture_files, select_capture_files
 from recruit_crawler.jd_parser import parse_deadline
 from recruit_crawler.pipeline import run_capture_import, run_dry_run, run_live_run
+from recruit_crawler.browser_evidence import build_browser_evidence, _redact
+from recruit_crawler.relevance import evaluate_relevance_cases
+from recruit_crawler.scorer import score_snapshot
+from recruit_crawler.schemas import JDSnapshot, RelevanceCase, UserContext
+from recruit_crawler.user_context import (
+    UserContextImportError,
+    merge_supplemental_answers,
+    parse_context_document,
+    supplemental_questions,
+)
 from recruit_crawler.schemas import SourceManifest
 from recruit_crawler.sources.base import build_source_adapter
 from recruit_crawler.sources.http import (
@@ -1716,7 +1726,20 @@ class SourceRegistryTests(unittest.TestCase):
 
         self.assertEqual(
             set(by_id),
-            {"company_careers", "saramin", "jobkorea", "wanted", "jumpit", "rallit", "rocketpunch", "linkedin"},
+            {
+                "company_careers",
+                "saramin",
+                "jobkorea",
+                "wanted",
+                "jumpit",
+                "rallit",
+                "rocketpunch",
+                "linkedin",
+                "naver_careers",
+                "kakao_careers",
+                "line_careers",
+                "coupang_careers",
+            },
         )
         self.assertEqual(by_id["jumpit"].target_lane, "public_http")
         self.assertEqual(by_id["jumpit"].target_status, "enabled")
@@ -1731,6 +1754,12 @@ class SourceRegistryTests(unittest.TestCase):
         self.assertEqual(by_id["rocketpunch"].target_status, "enabled")
         self.assertEqual(by_id["rocketpunch"].target_lane, "browser_automation")
         self.assertEqual(by_id["linkedin"].target_status, "excluded")
+        self.assertEqual(by_id["naver_careers"].target_status, "deferred")
+        self.assertIsNone(by_id["naver_careers"].target_lane)
+        self.assertEqual(by_id["kakao_careers"].target_status, "deferred")
+        self.assertIsNone(by_id["kakao_careers"].target_lane)
+        self.assertEqual(by_id["line_careers"].target_status, "deferred")
+        self.assertIsNone(by_id["line_careers"].target_lane)
 
     def test_source_registry_rejects_empty_target_lane(self) -> None:
         raw = self._live_config()
@@ -1882,9 +1911,22 @@ class SourceStatusCliTests(unittest.TestCase):
         by_id = {source["source_id"]: source for source in payload["sources"]}
         self.assertEqual(
             set(by_id),
-            {"company_careers", "saramin", "jobkorea", "wanted", "jumpit", "rallit", "rocketpunch", "linkedin"},
+            {
+                "company_careers",
+                "saramin",
+                "jobkorea",
+                "wanted",
+                "jumpit",
+                "rallit",
+                "rocketpunch",
+                "linkedin",
+                "naver_careers",
+                "kakao_careers",
+                "line_careers",
+                "coupang_careers",
+            },
         )
-        self.assertEqual(payload["sources"][-1]["source_id"], "company_careers")
+        self.assertEqual(payload["sources"][-1]["source_id"], "coupang_careers")
         for source in by_id.values():
             self.assertIn(source["target_lane"], {"public_http", "browser_automation", None})
         self.assertEqual(by_id["jumpit"]["target_lane"], "public_http")
@@ -1893,6 +1935,8 @@ class SourceStatusCliTests(unittest.TestCase):
         self.assertEqual(by_id["saramin"]["target_lane"], "public_http")
         self.assertEqual(by_id["wanted"]["target_lane"], "public_http")
         self.assertEqual(by_id["rocketpunch"]["target_lane"], "browser_automation")
+        self.assertIsNone(by_id["naver_careers"]["target_lane"])
+        self.assertIsNone(by_id["kakao_careers"]["target_lane"])
         self.assertEqual(by_id["rocketpunch"]["target_status"], "enabled")
         self.assertIsNone(by_id["linkedin"]["target_lane"])
 
@@ -2178,6 +2222,229 @@ class CaptureImportTests(unittest.TestCase):
         self.assertTrue(gate["manual_review_items"])
         locations = {candidate.source_id: candidate.location for candidate in imported.candidates}
         self.assertEqual(locations["jobkorea"], "울산광역시 남구 옥현로 129")
+
+class UserContextSchemaTests(unittest.TestCase):
+    def test_config_profile_creates_user_context_contract(self) -> None:
+        config = load_config(CONFIG)
+
+        self.assertEqual(config.user_context.skills, config.profile.skills)
+        self.assertEqual(config.user_context.explicit_deal_breakers, config.profile.exclusions)
+        self.assertEqual(config.user_context.provenance["skills"], "config.profile.skills")
+
+    def test_explicit_deal_breaker_excludes_without_raw_leakage(self) -> None:
+        config = load_config(CONFIG)
+        snapshot = JDSnapshot(
+            source_id="fixture",
+            source_url="https://jobs.example.test/unpaid",
+            source_posting_id="unpaid",
+            title="Unpaid Internship ML Engineer",
+            company="Example",
+            location="Seoul",
+            deadline_raw=None,
+            deadline=None,
+            deadline_uncertain=False,
+            required_qualifications=["Python", "machine learning"],
+            preferred_qualifications=["LLM"],
+            responsibilities=["Build models"],
+            company_info=["AI team"],
+        )
+
+        assessment = score_snapshot(snapshot, config)
+
+        self.assertEqual(assessment.verdict, "exclude")
+        self.assertEqual(assessment.recommendation, "low_priority")
+        self.assertEqual(assessment.deal_breaker_hits, ["unpaid internship"])
+        self.assertNotIn("PRIVATE_PROFILE_CANARY", " ".join(assessment.risks))
+
+
+class DocumentContextParserTests(unittest.TestCase):
+    def test_plaintext_context_imports_user_context(self) -> None:
+        context = parse_context_document(ROOT / "fixtures" / "user_context" / "context.md")
+
+        self.assertIn("Python", context.skills)
+        self.assertIn("Seoul", context.preferred_locations)
+        self.assertEqual(context.max_experience_years, 2)
+
+    def test_private_canary_document_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "private.md"
+            path.write_text("Skills: Python\nPRIVATE_PROFILE_CANARY", encoding="utf-8")
+
+            with self.assertRaises(UserContextImportError):
+                parse_context_document(path)
+
+    def test_docx_context_imports_user_context_when_dependency_available(self) -> None:
+        try:
+            from docx import Document
+        except Exception:
+            self.skipTest("python-docx is not installed")
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "context.docx"
+            doc = Document()
+            doc.add_paragraph("Roles: ML Engineer")
+            doc.add_paragraph("Skills: Python, SQL")
+            doc.add_paragraph("Locations: Remote")
+            doc.add_paragraph("Experience: 2 years")
+            doc.save(str(path))
+
+            context = parse_context_document(path)
+
+        self.assertIn("SQL", context.skills)
+        self.assertIn("Remote", context.preferred_locations)
+
+    def test_pdf_context_imports_user_context_when_dependency_available(self) -> None:
+        try:
+            from pypdf import PdfWriter
+        except Exception:
+            self.skipTest("pypdf is not installed")
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "empty.pdf"
+            writer = PdfWriter()
+            writer.add_blank_page(width=72, height=72)
+            with path.open("wb") as fh:
+                writer.write(fh)
+
+            with self.assertRaises(UserContextImportError):
+                parse_context_document(path)
+
+
+class SupplementalInterviewTests(unittest.TestCase):
+    def test_missing_context_generates_questions_and_answers_merge(self) -> None:
+        context = UserContext(desired_roles=[], skills=[], preferred_locations=[], max_experience_years=0)
+
+        questions = supplemental_questions(context)
+        merged = merge_supplemental_answers(
+            context,
+            {
+                "desired_roles": "ML Engineer",
+                "skills": "Python, SQL",
+                "preferred_locations": "Seoul",
+                "max_experience_years": "2",
+            },
+        )
+
+        self.assertGreaterEqual(len(questions), 4)
+        self.assertEqual(merged.skills, ["Python", "SQL"])
+        self.assertEqual(merged.provenance["skills"], "supplemental_interview")
+
+
+class RelevanceCaseEvaluationTests(unittest.TestCase):
+    def _snapshot(self, case_id: int, *, title: str, required: list[str], location: str = "Seoul") -> JDSnapshot:
+        return JDSnapshot(
+            source_id="fixture",
+            source_url=f"https://jobs.example.test/{case_id}",
+            source_posting_id=str(case_id),
+            title=title,
+            company="Example",
+            location=location,
+            deadline_raw=None,
+            deadline=None,
+            deadline_uncertain=False,
+            required_qualifications=required,
+            preferred_qualifications=["LLM"],
+            responsibilities=["Build Python data products"],
+            company_info=["AI team"],
+        )
+
+    def test_thirty_seed_relevance_cases_evaluate_deterministically(self) -> None:
+        config = load_config(CONFIG)
+        cases = []
+        for index in range(30):
+            if index % 3 == 0:
+                context = config.user_context
+                expected = "include"
+                snapshot = self._snapshot(index, title="ML Engineer", required=["Python", "machine learning"])
+                movement = "up"
+            elif index % 3 == 1:
+                context = UserContext(desired_roles=["ML Engineer"], skills=[], preferred_locations=["Seoul"], max_experience_years=2)
+                expected = "hold"
+                snapshot = self._snapshot(index, title="ML Engineer", required=["Rust"])
+                movement = "same"
+            else:
+                context = UserContext(
+                    desired_roles=["ML Engineer"],
+                    skills=["Python"],
+                    preferred_locations=["Seoul"],
+                    max_experience_years=2,
+                    explicit_deal_breakers=["unpaid internship"],
+                )
+                expected = "exclude"
+                snapshot = self._snapshot(index, title="Unpaid Internship ML Engineer", required=["Python"])
+                movement = "down"
+            cases.append(
+                RelevanceCase(
+                    case_id=f"case-{index:02d}",
+                    user_context=context,
+                    snapshot=snapshot,
+                    expected_verdict=expected,
+                    expected_movement=movement,
+                )
+            )
+
+        failures = evaluate_relevance_cases(cases, config)
+
+        self.assertEqual(len(cases), 30)
+        self.assertEqual(failures, [])
+
+
+class SourceCandidateSelectionTests(unittest.TestCase):
+    def test_company_careers_gate_keeps_zero_candidate_targets_deferred(self) -> None:
+        config = load_config(ROOT / "config" / "live_sources.sample.json", allow_real_sources=True)
+        selected = [source for source in config.sources if source.v1_role == "company_careers_selected"]
+        fallbacks = [source for source in config.sources if source.v1_role == "company_careers_fallback"]
+
+        self.assertEqual({source.source_id for source in selected}, {"naver_careers", "kakao_careers"})
+        self.assertEqual({source.source_id for source in fallbacks}, {"line_careers", "coupang_careers"})
+        for source in selected:
+            self.assertFalse(source.enabled)
+            self.assertIsNone(source.target_lane)
+            self.assertEqual(source.target_status, "deferred")
+            self.assertEqual(source.access_mode, "public_page")
+            self.assertTrue(source.blockers)
+            self.assertFalse(source.auth_required)
+
+
+class BrowserEvidenceCliTests(unittest.TestCase):
+    def test_browser_evidence_fixture_writes_allowed_fields_without_dom_leakage(self) -> None:
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(output):
+            exit_code = cli_main(
+                [
+                    "browser-evidence",
+                    "--config",
+                    str(ROOT / "config" / "live_sources.sample.json"),
+                    "--source-id",
+                    "rocketpunch",
+                    "--fixture-html",
+                    str(ROOT / "fixtures" / "browser_evidence" / "rocketpunch_listing.html"),
+                    "--output",
+                    str(Path(tmp) / "rocketpunch_fixture.json"),
+                ]
+            )
+            transcript = json.loads((Path(tmp) / "rocketpunch_fixture.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(transcript["schema_version"], 1)
+        self.assertEqual(transcript["command_mode"], "fixture")
+        self.assertIn("dom_sha256", transcript)
+        self.assertNotIn("dom", transcript)
+        self.assertEqual(transcript["privacy_findings"], [])
+        self.assertTrue(transcript["filterability"]["stable_posting_url"])
+
+    def test_browser_evidence_private_target_fails(self) -> None:
+        config = load_config(ROOT / "config" / "live_sources.sample.json", allow_real_sources=True)
+        rocketpunch = next(source for source in config.sources if source.source_id == "rocketpunch")
+
+        transcript = build_browser_evidence(rocketpunch, target_url="https://www.rocketpunch.com/private?session=secret")
+
+        self.assertEqual(transcript["exit_code"], 1)
+        self.assertTrue(transcript["errors"])
+
+    def test_browser_evidence_redacts_private_markers_case_insensitively(self) -> None:
+        self.assertEqual(
+            _redact("https://jobs.example.test/apply?Session=abc&ACCESS_TOKEN=def"),
+            "https://jobs.example.test/apply?[REDACTED]abc&[REDACTED]def",
+        )
 
 
 if __name__ == "__main__":
