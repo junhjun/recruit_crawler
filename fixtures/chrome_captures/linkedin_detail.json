@@ -1,0 +1,34 @@
+{
+  "capture_schema_version": 1,
+  "capture_mode": "current_detail",
+  "extension_version": "0.1.0",
+  "source_id": "linkedin",
+  "page_url": "https://www.linkedin.com/jobs/view/4432928554/",
+  "page_title": "LinkedIn Data Engineer | LinkedIn",
+  "captured_at": "2026-06-30T04:00:00Z",
+  "diagnostics": {
+    "schema_version": 1,
+    "extension_version": "0.1.0",
+    "source_id": "linkedin",
+    "capture_mode": "current_detail",
+    "posting_count": 1,
+    "postings": [{"source_posting_id": "4432928554", "detail_length": 88, "has_requirements": true, "marker_hit": true, "manual_review_flags": []}],
+    "warnings": [],
+    "errors": [],
+    "extraction_strategy": "linkedin_current_detail_dom"
+  },
+  "postings": [
+    {
+      "source_id": "linkedin",
+      "source_url": "https://www.linkedin.com/jobs/view/4432928554/",
+      "source_posting_id": "4432928554",
+      "title": "LinkedIn Data Engineer",
+      "company": "LinkedIn Partner Co",
+      "location": "서울",
+      "deadline": "",
+      "skills": ["Python", "SQL"],
+      "requirements": "Job description Responsibilities Build data pipeline systems. Requirements Python SQL PyTorch.",
+      "captured_at": "2026-06-30T04:00:00Z"
+    }
+  ]
+}

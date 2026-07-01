@@ -1,0 +1,35 @@
+{
+  "capture_schema_version": 1,
+  "capture_mode": "current_detail",
+  "extension_version": "0.1.0",
+  "source_id": "saramin",
+  "page_url": "https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=3",
+  "page_title": "Image JD Engineer - 사람인",
+  "captured_at": "2026-06-30T04:01:00Z",
+  "diagnostics": {
+    "schema_version": 1,
+    "extension_version": "0.1.0",
+    "source_id": "saramin",
+    "capture_mode": "current_detail",
+    "posting_count": 1,
+    "postings": [{"source_posting_id": "3", "detail_length": 0, "has_requirements": false, "marker_hit": false, "manual_review_flags": ["본문 OCR 필요: 사람인 이미지형 JD 또는 DOM 텍스트 없음"]}],
+    "warnings": ["image-only JD suspected"],
+    "errors": [],
+    "extraction_strategy": "current_detail_dom",
+    "iframe_status": "same_origin_dom_only"
+  },
+  "postings": [
+    {
+      "source_id": "saramin",
+      "source_url": "https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=3",
+      "source_posting_id": "3",
+      "title": "Image JD Engineer",
+      "company": "Image Co",
+      "location": "서울",
+      "deadline": "",
+      "skills": ["Python"],
+      "requirements": "",
+      "captured_at": "2026-06-30T04:01:00Z"
+    }
+  ]
+}

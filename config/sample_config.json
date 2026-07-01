@@ -1,0 +1,38 @@
+{
+  "top_n": 4,
+  "output_dir": "reports",
+  "fixture_path": "fixtures/postings.json",
+  "delivery_mode": "markdown_local",
+  "thresholds": {
+    "apply": 75,
+    "hold": 50
+  },
+  "scoring_weights": {
+    "required": 45,
+    "preferred": 20,
+    "responsibilities": 15,
+    "company": 10,
+    "location": 10
+  },
+  "profile": {
+    "desired_roles": ["ML engineer", "AI engineer", "data engineer"],
+    "skills": ["python", "machine learning", "pytorch", "llm", "data pipeline", "sql", "kubernetes"],
+    "preferred_locations": ["Seoul", "Remote"],
+    "max_experience_years": 2,
+    "exclusions": ["unpaid internship"],
+    "private_canaries": ["PRIVATE_PROFILE_CANARY"]
+  },
+  "sources": [
+    {
+      "source_id": "fixture",
+      "enabled": true,
+      "access_mode": "fixture",
+      "auth_required": false,
+      "tos_review_status": "not_required",
+      "domains": [],
+      "rate_limit": "none",
+      "failure_mode": "skip_source",
+      "allowed_persisted_fields": ["source_id", "source_url", "title", "company", "location", "deadline", "structured_snapshot"]
+    }
+  ]
+}

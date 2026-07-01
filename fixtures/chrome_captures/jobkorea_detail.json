@@ -1,0 +1,35 @@
+{
+  "capture_schema_version": 1,
+  "capture_mode": "current_detail",
+  "extension_version": "0.1.0",
+  "source_id": "jobkorea",
+  "page_url": "https://www.jobkorea.co.kr/Recruit/GI_Read/49476607",
+  "page_title": "Forward Deployed 엔지니어 | 잡코리아",
+  "captured_at": "2026-06-30T04:02:00Z",
+  "diagnostics": {
+    "schema_version": 1,
+    "extension_version": "0.1.0",
+    "source_id": "jobkorea",
+    "capture_mode": "current_detail",
+    "posting_count": 1,
+    "postings": [{"source_posting_id": "49476607", "detail_length": 93, "has_requirements": true, "marker_hit": true, "manual_review_flags": []}],
+    "warnings": [],
+    "errors": [],
+    "extraction_strategy": "current_detail_dom",
+    "iframe_status": "same_origin_dom_only"
+  },
+  "postings": [
+    {
+      "source_id": "jobkorea",
+      "source_url": "https://www.jobkorea.co.kr/Recruit/GI_Read/49476607",
+      "source_posting_id": "49476607",
+      "title": "Forward Deployed 엔지니어",
+      "company": "플라잎",
+      "location": "울산 남구 마감일 ~7/28(화",
+      "deadline": "",
+      "skills": ["Python", "AI"],
+      "requirements": "이런 업무를 해요 Python AI 시스템 개발. 이런 분들을 찾고 있어요 PyTorch 경험. 근무지 주소 : 울산광역시 남구 옥현로 129 지도보기",
+      "captured_at": "2026-06-30T04:02:00Z"
+    }
+  ]
+}

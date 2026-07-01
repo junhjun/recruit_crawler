@@ -1,0 +1,42 @@
+# Sensitive local inputs
+personal_info/
+profile.yaml
+profile.yml
+profile.json
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Local runtime data
+data/
+outputs/
+reports/
+run_history/
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs and generated artifacts
+*.log
+.DS_Store
+
+# Test/cache outputs
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Local automation/runtime state
+.codex/
+
+# GJC/runtime evidence generated during local planning and verification
+.gjc/
+.omx/
+artifacts/

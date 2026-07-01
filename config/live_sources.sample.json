@@ -1,0 +1,760 @@
+{
+  "top_n": 8,
+  "output_dir": "reports",
+  "fixture_path": "fixtures/postings.json",
+  "delivery_mode": "markdown_local",
+  "thresholds": {
+    "apply": 75,
+    "hold": 50
+  },
+  "scoring_weights": {
+    "required": 45,
+    "preferred": 20,
+    "responsibilities": 15,
+    "company": 10,
+    "location": 10
+  },
+  "profile": {
+    "desired_roles": [
+      "ML engineer",
+      "AI engineer",
+      "data engineer"
+    ],
+    "skills": [
+      "python",
+      "machine learning",
+      "pytorch",
+      "tensorflow",
+      "llm",
+      "rag",
+      "ai",
+      "인공지능",
+      "data pipeline",
+      "data",
+      "sql",
+      "kubernetes"
+    ],
+    "preferred_locations": [
+      "Seoul",
+      "Remote"
+    ],
+    "max_experience_years": 2,
+    "exclusions": [
+      "unpaid internship"
+    ],
+    "private_canaries": [
+      "PRIVATE_PROFILE_CANARY"
+    ]
+  },
+  "sources": [
+    {
+      "source_id": "saramin",
+      "enabled": true,
+      "access_mode": "public_page",
+      "auth_required": false,
+      "tos_review_status": "pass",
+      "domains": [
+        "www.saramin.co.kr"
+      ],
+      "rate_limit": "1 request / second after source review",
+      "failure_mode": "skip_source",
+      "allowed_persisted_fields": [
+        "source_id",
+        "source_url",
+        "title",
+        "company",
+        "location",
+        "deadline",
+        "structured_snapshot"
+      ],
+      "options": {
+        "keywords": "python ai data llm",
+        "candidate_include_keywords": [
+          "AI",
+          "인공지능",
+          "머신러닝",
+          "Machine Learning",
+          "ML",
+          "데이터",
+          "Data",
+          "Python",
+          "파이썬",
+          "LLM",
+          "딥러닝",
+          "추천",
+          "검색",
+          "백엔드"
+        ],
+        "candidate_exclude_keywords": [
+          "조리",
+          "주방",
+          "지게차",
+          "물류 알바",
+          "매장",
+          "판매"
+        ],
+        "max_pages": 20,
+        "delay_seconds": 1,
+        "require_robots": false,
+        "detail_urls": [
+          "https://www.saramin.co.kr/zf_user/jobs/relay/view-detail?rec_idx=54106686&rec_seq=0"
+        ],
+        "explicit_automated_permission": true,
+        "search_urls": [
+          "https://www.saramin.co.kr/zf_user/search/recruit?searchword=python%20ai%20data%20llm"
+        ],
+        "include_url_patterns": [
+          "/zf_user/jobs/relay/view",
+          "/zf_user/jobs/view"
+        ],
+        "exclude_url_patterns": [
+          "login",
+          "join",
+          "apply"
+        ],
+        "link_include_keywords": [
+          "AI",
+          "인공지능",
+          "머신러닝",
+          "Machine Learning",
+          "ML",
+          "데이터",
+          "Data",
+          "Python",
+          "파이썬",
+          "LLM",
+          "딥러닝",
+          "추천",
+          "검색",
+          "백엔드"
+        ]
+      },
+      "display_name": "Saramin",
+      "v1_role": "core",
+      "target_status": "enabled",
+      "maintenance_status": "active",
+      "target_lane": "public_http",
+      "candidate_lanes": [],
+      "automation_level": "no_human",
+      "status_reason": "public HTTP search/listing에서 relay 상세 URL을 발견하고 공개 detail iframe URL로 정규화해 JD 본문 섹션을 수집합니다.",
+      "evidence": [
+        "tests/test_dry_run.py::test_saramin_adapter_collects_public_detail_body_without_api",
+        "artifacts/ultragoal_g002/saramin_browser_automation_iframe_details.json",
+        "artifacts/ultragoal_g002/saramin_browser_automation_detail.json",
+        "tests/test_dry_run.py::test_saramin_adapter_discovers_public_relay_detail_urls_from_listing"
+      ],
+      "blockers": [],
+      "next_action": "목록/detail shape drift 시 fixture/parser test를 갱신합니다.",
+      "adapter_code_path": "src/recruit_crawler/sources/platforms.py::SaraminAdapter",
+      "test_refs": [
+        "tests/test_dry_run.py::test_saramin_adapter_collects_public_detail_body_without_api",
+        "tests/test_dry_run.py::test_saramin_adapter_discovers_public_relay_detail_urls_from_listing"
+      ],
+      "docs_refs": [
+        "docs/source_collection_matrix.md",
+        "docs/source_access_reviews.md",
+        "docs/source_search_logic.md"
+      ]
+    },
+    {
+      "source_id": "jobkorea",
+      "enabled": true,
+      "access_mode": "public_page",
+      "auth_required": false,
+      "tos_review_status": "pass",
+      "domains": [
+        "www.jobkorea.co.kr"
+      ],
+      "rate_limit": "1 request / second after source review",
+      "failure_mode": "skip_source",
+      "allowed_persisted_fields": [
+        "source_id",
+        "source_url",
+        "title",
+        "company",
+        "location",
+        "deadline",
+        "structured_snapshot"
+      ],
+      "options": {
+        "search_urls": [
+          "https://www.jobkorea.co.kr/recruit/ai-jobs"
+        ],
+        "api_url": "https://www.jobkorea.co.kr/recruit/ai-jobs/GetRecruitList",
+        "keyword": "python",
+        "api_params": {
+          "pageNo": 1,
+          "pageSize": 30,
+          "orderType": "1"
+        },
+        "include_url_patterns": [
+          "/Recruit/GI_Read"
+        ],
+        "exclude_url_patterns": [
+          "Login",
+          "Register",
+          "Apply"
+        ],
+        "link_include_keywords": [
+          "AI",
+          "인공지능",
+          "머신러닝",
+          "Machine Learning",
+          "ML",
+          "데이터",
+          "Data",
+          "Python",
+          "파이썬",
+          "LLM",
+          "딥러닝",
+          "추천",
+          "검색",
+          "백엔드"
+        ],
+        "candidate_include_keywords": [
+          "AI",
+          "인공지능",
+          "머신러닝",
+          "Machine Learning",
+          "ML",
+          "데이터",
+          "Data",
+          "Python",
+          "파이썬",
+          "LLM",
+          "딥러닝",
+          "추천",
+          "검색",
+          "백엔드"
+        ],
+        "candidate_exclude_keywords": [
+          "조리",
+          "주방",
+          "지게차",
+          "물류 알바",
+          "매장",
+          "판매"
+        ],
+        "max_pages": 30,
+        "delay_seconds": 1,
+        "timeout_seconds": 25,
+        "fetch_retries": 1,
+        "require_robots": true,
+        "require_detail_body": true,
+        "fetch_detail_pages": true
+      },
+      "display_name": "JobKorea",
+      "v1_role": "core",
+      "target_status": "enabled",
+      "maintenance_status": "active",
+      "target_lane": "public_http",
+      "candidate_lanes": [],
+      "automation_level": "no_human",
+      "status_reason": "public HTTP 목록 API HTML에서 상세 URL을 찾고, 공개 상세 페이지의 섹션 또는 JSON-LD JobPosting을 추출합니다.",
+      "evidence": [
+        "tests/test_dry_run.py::test_jobkorea_adapter_discovers_ai_jobs_from_api_html",
+        "tests/test_dry_run.py::test_jobkorea_adapter_enriches_api_cards_with_public_detail_body",
+        "fixtures/chrome_captures/jobkorea_detail.json historical manual capture fixture",
+        "tests/test_dry_run.py::test_jobkorea_required_detail_body_drops_card_only_candidates",
+        "tests/test_dry_run.py::test_jobkorea_required_detail_body_rejects_empty_listing_fallback",
+        "tests/test_dry_run.py::test_jobkorea_adapter_uses_json_ld_when_detail_sections_are_absent",
+        "tests/test_dry_run.py::test_jobkorea_json_ld_graph_detail_quality_sample",
+        "tests/test_dry_run.py::test_jobkorea_adapter_collects_api_keywords_as_snapshot_terms"
+      ],
+      "blockers": [],
+      "next_action": "상세 페이지 shape 변경 시 detail-body parser fixture를 갱신합니다.",
+      "adapter_code_path": "src/recruit_crawler/sources/platforms.py::JobKoreaAdapter",
+      "test_refs": [
+        "tests/test_dry_run.py::test_jobkorea_adapter_discovers_ai_jobs_from_api_html",
+        "tests/test_dry_run.py::test_jobkorea_adapter_enriches_api_cards_with_public_detail_body",
+        "tests/test_dry_run.py::test_jobkorea_adapter_collects_api_keywords_as_snapshot_terms",
+        "tests/test_dry_run.py::test_jobkorea_required_detail_body_drops_card_only_candidates",
+        "tests/test_dry_run.py::test_jobkorea_required_detail_body_rejects_empty_listing_fallback",
+        "tests/test_dry_run.py::test_jobkorea_adapter_uses_json_ld_when_detail_sections_are_absent",
+        "tests/test_dry_run.py::test_jobkorea_json_ld_graph_detail_quality_sample"
+      ],
+      "docs_refs": [
+        "docs/source_collection_matrix.md",
+        "docs/source_access_reviews.md",
+        "docs/source_search_logic.md"
+      ]
+    },
+    {
+      "source_id": "wanted",
+      "enabled": true,
+      "access_mode": "public_page",
+      "auth_required": false,
+      "tos_review_status": "pass",
+      "domains": [
+        "www.wanted.co.kr"
+      ],
+      "rate_limit": "requires source review; public pages may be app-rendered",
+      "failure_mode": "skip_source",
+      "allowed_persisted_fields": [
+        "source_id",
+        "source_url",
+        "title",
+        "company",
+        "location",
+        "deadline",
+        "structured_snapshot"
+      ],
+      "options": {
+        "include_url_patterns": [
+          "/wd/"
+        ],
+        "max_pages": 20,
+        "delay_seconds": 1,
+        "require_robots": false,
+        "explicit_automated_permission": true,
+        "detail_urls": [
+          "https://www.wanted.co.kr/wd/371139"
+        ],
+        "search_urls": [
+          "https://www.wanted.co.kr/search?query=python%20ai%20data%20llm&tab=position"
+        ],
+        "exclude_url_patterns": [
+          "login",
+          "signup"
+        ],
+        "link_include_keywords": [
+          "AI",
+          "인공지능",
+          "머신러닝",
+          "Machine Learning",
+          "ML",
+          "데이터",
+          "Data",
+          "Python",
+          "파이썬",
+          "LLM",
+          "딥러닝",
+          "추천",
+          "검색",
+          "백엔드"
+        ],
+        "candidate_include_keywords": [
+          "AI",
+          "인공지능",
+          "머신러닝",
+          "Machine Learning",
+          "ML",
+          "데이터",
+          "Data",
+          "Python",
+          "파이썬",
+          "LLM",
+          "딥러닝",
+          "추천",
+          "검색",
+          "백엔드"
+        ],
+        "candidate_exclude_keywords": [
+          "조리",
+          "주방",
+          "지게차",
+          "물류 알바",
+          "매장",
+          "판매"
+        ]
+      },
+      "display_name": "Wanted",
+      "v1_role": "core",
+      "target_status": "enabled",
+      "maintenance_status": "active",
+      "target_lane": "public_http",
+      "candidate_lanes": [],
+      "automation_level": "no_human",
+      "status_reason": "public HTTP search/listing에서 공개 /wd detail 링크를 발견하고 detail HTML parser로 JD 본문을 수집합니다.",
+      "evidence": [
+        "tests/test_dry_run.py::test_wanted_adapter_collects_public_detail_body_without_manual_payload",
+        "artifacts/ultragoal_g003/wanted_browser_detail.json",
+        "artifacts/ultragoal_g003/wanted_browser_transcript.json",
+        "tests/test_dry_run.py::test_wanted_adapter_discovers_public_wd_urls_from_listing"
+      ],
+      "blockers": [],
+      "next_action": "검색/detail shape drift 시 fixture/parser test를 갱신합니다.",
+      "adapter_code_path": "src/recruit_crawler/sources/platforms.py::WantedAdapter",
+      "test_refs": [
+        "tests/test_dry_run.py::test_wanted_adapter_collects_public_detail_body_without_manual_payload",
+        "tests/test_dry_run.py::test_wanted_adapter_discovers_public_wd_urls_from_listing"
+      ],
+      "docs_refs": [
+        "docs/source_collection_matrix.md",
+        "docs/source_access_reviews.md",
+        "docs/source_search_logic.md"
+      ]
+    },
+    {
+      "source_id": "jumpit",
+      "enabled": true,
+      "access_mode": "public_page",
+      "auth_required": false,
+      "tos_review_status": "pass",
+      "domains": [
+        "jumpit.saramin.co.kr"
+      ],
+      "rate_limit": "1 request / second after source review",
+      "failure_mode": "skip_source",
+      "allowed_persisted_fields": [
+        "source_id",
+        "source_url",
+        "title",
+        "company",
+        "location",
+        "deadline",
+        "structured_snapshot"
+      ],
+      "options": {
+        "sitemap_urls": [
+          "https://jumpit.saramin.co.kr/sitemap/sitemap_position_view_1.xml"
+        ],
+        "include_url_patterns": [
+          "/position/\\d+"
+        ],
+        "exclude_url_patterns": [
+          "/resumes",
+          "/resume/",
+          "/myjumpit",
+          "/applications-status/",
+          "/auth/"
+        ],
+        "candidate_include_keywords": [
+          "AI",
+          "인공지능",
+          "머신러닝",
+          "Machine Learning",
+          "ML",
+          "데이터",
+          "Data",
+          "Python",
+          "파이썬",
+          "LLM",
+          "딥러닝",
+          "추천",
+          "검색",
+          "백엔드"
+        ],
+        "candidate_exclude_keywords": [
+          "반도체",
+          "FPGA",
+          "ASIC",
+          "Verilog",
+          "디자인"
+        ],
+        "max_pages": 25,
+        "delay_seconds": 1,
+        "require_robots": true
+      },
+      "display_name": "Jumpit",
+      "v1_role": "core",
+      "target_status": "enabled",
+      "maintenance_status": "active",
+      "target_lane": "public_http",
+      "candidate_lanes": [],
+      "automation_level": "no_human",
+      "status_reason": "sitemap/detail public HTTP path와 parser test가 있습니다.",
+      "evidence": [
+        "Jumpit sitemap position detail pages expose public JD data",
+        "tests/test_dry_run.py::test_jumpit_adapter_tolerates_spaced_next_payload_shape",
+        "tests/test_dry_run.py::test_jumpit_adapter_collects_jobs_from_sitemap_and_react_data"
+      ],
+      "blockers": [],
+      "next_action": "페이지 shape 변경 시 fixture를 갱신합니다.",
+      "adapter_code_path": "src/recruit_crawler/sources/platforms.py::JumpitAdapter",
+      "test_refs": [
+        "tests/test_dry_run.py::test_jumpit_adapter_collects_jobs_from_sitemap_and_react_data",
+        "tests/test_dry_run.py::test_jumpit_adapter_tolerates_spaced_next_payload_shape"
+      ],
+      "docs_refs": [
+        "docs/source_collection_matrix.md",
+        "docs/source_access_reviews.md",
+        "docs/source_search_logic.md"
+      ]
+    },
+    {
+      "source_id": "rallit",
+      "enabled": true,
+      "access_mode": "public_page",
+      "auth_required": false,
+      "tos_review_status": "pass",
+      "domains": [
+        "www.rallit.com"
+      ],
+      "rate_limit": "1 request / second after source review",
+      "failure_mode": "skip_source",
+      "allowed_persisted_fields": [
+        "source_id",
+        "source_url",
+        "title",
+        "company",
+        "location",
+        "deadline",
+        "structured_snapshot"
+      ],
+      "options": {
+        "search_urls": [
+          "https://www.rallit.com"
+        ],
+        "include_url_patterns": [
+          "/positions/\\d+"
+        ],
+        "exclude_url_patterns": [
+          "/apply",
+          "/auth",
+          "/my",
+          "/resume"
+        ],
+        "candidate_include_keywords": [
+          "AI",
+          "인공지능",
+          "머신러닝",
+          "Machine Learning",
+          "ML",
+          "데이터",
+          "Data",
+          "Python",
+          "파이썬",
+          "LLM",
+          "딥러닝",
+          "추천",
+          "검색",
+          "백엔드"
+        ],
+        "candidate_exclude_keywords": [
+          "디자인",
+          "마케팅",
+          "영업",
+          "사업개발"
+        ],
+        "max_pages": 20,
+        "delay_seconds": 1,
+        "require_robots": true
+      },
+      "display_name": "Rallit",
+      "v1_role": "core",
+      "target_status": "enabled",
+      "maintenance_status": "active",
+      "target_lane": "public_http",
+      "candidate_lanes": [],
+      "automation_level": "no_human",
+      "status_reason": "public positions/detail page adapter와 embedded CSS cleanup parser test가 있습니다.",
+      "evidence": [
+        "Rallit public positions and detail pages expose detailed JD text",
+        "tests/test_dry_run.py::test_rallit_adapter_strips_embedded_css_from_public_detail",
+        "tests/test_dry_run.py::test_rallit_adapter_tolerates_alternate_section_markers",
+        "tests/test_dry_run.py::test_rallit_adapter_collects_jobs_from_public_positions"
+      ],
+      "blockers": [],
+      "next_action": "페이지 shape 변경 시 fixture를 갱신합니다.",
+      "adapter_code_path": "src/recruit_crawler/sources/platforms.py::RallitAdapter",
+      "test_refs": [
+        "tests/test_dry_run.py::test_rallit_adapter_collects_jobs_from_public_positions",
+        "tests/test_dry_run.py::test_rallit_adapter_strips_embedded_css_from_public_detail",
+        "tests/test_dry_run.py::test_rallit_adapter_tolerates_alternate_section_markers"
+      ],
+      "docs_refs": [
+        "docs/source_collection_matrix.md",
+        "docs/source_access_reviews.md",
+        "docs/source_search_logic.md"
+      ]
+    },
+    {
+      "source_id": "rocketpunch",
+      "enabled": true,
+      "access_mode": "browser_automation",
+      "auth_required": false,
+      "tos_review_status": "unknown",
+      "domains": [
+        "www.rocketpunch.com"
+      ],
+      "rate_limit": "no-human headless browser automation; one jobs page per run",
+      "failure_mode": "skip_source",
+      "allowed_persisted_fields": [
+        "source_id",
+        "source_url",
+        "title",
+        "company",
+        "location",
+        "deadline",
+        "structured_snapshot"
+      ],
+      "options": {
+        "search_urls": [
+          "https://www.rocketpunch.com/en/jobs"
+        ],
+        "include_url_patterns": [
+          "/jobs"
+        ],
+        "candidate_include_keywords": [
+          "AI",
+          "인공지능",
+          "머신러닝",
+          "Machine Learning",
+          "ML",
+          "데이터",
+          "Data",
+          "Python",
+          "파이썬",
+          "LLM",
+          "딥러닝",
+          "백엔드",
+          "Backend",
+          "DataOps",
+          "Fintech"
+        ],
+        "candidate_exclude_keywords": [
+          "Designer",
+          "Design",
+          "Marketing",
+          "Sales",
+          "영업",
+          "마케팅",
+          "디자인"
+        ],
+        "max_pages": 20,
+        "delay_seconds": 0,
+        "browser_timeout_seconds": 45,
+        "policy_override_mode": "user_directed_ignore",
+        "policy_override_reason": "user directed RocketPunch browser automation despite source notice",
+        "policy_override_acknowledges_source_notice": true
+      },
+      "display_name": "RocketPunch",
+      "v1_role": "core_candidate",
+      "target_status": "enabled",
+      "maintenance_status": "active",
+      "target_lane": "browser_automation",
+      "candidate_lanes": [],
+      "automation_level": "no_human",
+      "status_reason": "사용자 지시에 따라 source notice를 명시적으로 acknowledge하고 user_directed_ignore override가 있는 no-human browser automation target으로 jobs listing-card DOM 텍스트를 수집합니다.",
+      "evidence": [
+        "tests/test_dry_run.py::test_rocketpunch_browser_automation_parses_listing_cards_without_detail_links",
+        "source review observed explicit no-crawling/no-collection notice; session policy override acknowledged",
+        "browser automation experiment showed https://www.rocketpunch.com/en/jobs loads listing-card text without human operation"
+      ],
+      "blockers": [],
+      "next_action": "detail anchor가 계속 노출되지 않으면 listing URL + synthetic posting id 방식의 카드 parser 품질을 샘플링합니다.",
+      "adapter_code_path": "src/recruit_crawler/sources/platforms.py::RocketPunchBrowserAutomationAdapter",
+      "test_refs": [
+        "tests/test_dry_run.py::test_rocketpunch_browser_automation_parses_listing_cards_without_detail_links"
+      ],
+      "docs_refs": [
+        "docs/source_collection_matrix.md",
+        "docs/source_access_reviews.md",
+        "docs/source_search_logic.md"
+      ]
+    },
+    {
+      "source_id": "linkedin",
+      "enabled": false,
+      "access_mode": "public_page",
+      "auth_required": true,
+      "tos_review_status": "unknown",
+      "domains": [
+        "www.linkedin.com"
+      ],
+      "rate_limit": "approved partner/API access only",
+      "failure_mode": "skip_source",
+      "allowed_persisted_fields": [
+        "source_id",
+        "source_url",
+        "title",
+        "company",
+        "location",
+        "deadline",
+        "structured_snapshot"
+      ],
+      "options": {
+        "search_urls": [],
+        "max_pages": 20,
+        "delay_seconds": 1,
+        "require_robots": true
+      },
+      "display_name": "LinkedIn",
+      "v1_role": "excluded",
+      "target_status": "excluded",
+      "maintenance_status": "excluded",
+      "target_lane": null,
+      "candidate_lanes": [],
+      "automation_level": "excluded",
+      "status_reason": "V1 target workflow에서 제외합니다. 직접 스크래핑/API/partner payload는 target이 아닙니다.",
+      "evidence": [
+        "fixtures/chrome_captures/linkedin_detail.json retained as historical/manual fixture only"
+      ],
+      "blockers": [
+        "direct scraping blocked",
+        "auth/session/privacy risk",
+        "partner/API payload excluded"
+      ],
+      "next_action": "V1에서는 자동 수집 대상에 포함하지 않습니다.",
+      "adapter_code_path": "",
+      "test_refs": [],
+      "docs_refs": [
+        "docs/source_collection_matrix.md",
+        "docs/source_access_reviews.md",
+        "docs/source_search_logic.md"
+      ]
+    },
+    {
+      "source_id": "company_careers",
+      "enabled": false,
+      "access_mode": "public_page",
+      "auth_required": false,
+      "tos_review_status": "pass",
+      "domains": [
+        "example.com"
+      ],
+      "rate_limit": "1 request / second",
+      "failure_mode": "skip_source",
+      "allowed_persisted_fields": [
+        "source_id",
+        "source_url",
+        "title",
+        "company",
+        "location",
+        "deadline",
+        "structured_snapshot"
+      ],
+      "options": {
+        "start_urls": [],
+        "search_urls": [],
+        "include_url_patterns": [
+          "job",
+          "career",
+          "recruit"
+        ],
+        "exclude_url_patterns": [
+          "login",
+          "signup"
+        ],
+        "max_pages": 20,
+        "delay_seconds": 1,
+        "require_robots": true
+      },
+      "display_name": "Company careers",
+      "v1_role": "expansion",
+      "target_status": "deferred",
+      "maintenance_status": "watch",
+      "target_lane": null,
+      "candidate_lanes": [
+        "public_http"
+      ],
+      "automation_level": "no_human_candidate",
+      "status_reason": "회사별 공개 채용 페이지는 도메인 단위 robots/access 검토와 fixture가 필요합니다.",
+      "evidence": [
+        "per-domain public HTTP target only after review"
+      ],
+      "blockers": [
+        "per-domain allowlist and parser evidence missing"
+      ],
+      "next_action": "회사별 source review와 fixture/parser test를 추가한 뒤 개별 활성화합니다.",
+      "adapter_code_path": "",
+      "test_refs": [],
+      "docs_refs": [
+        "docs/source_collection_matrix.md",
+        "docs/source_access_reviews.md",
+        "docs/source_search_logic.md"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "Recruit Capture",
+  "version": "0.1.0",
+  "description": "Capture visible recruiting postings from the current browser tab into local JSON.",
+  "permissions": ["activeTab", "scripting", "downloads"],
+  "host_permissions": [
+    "https://*.saramin.co.kr/*",
+    "https://*.jobkorea.co.kr/*",
+    "https://*.wanted.co.kr/*",
+    "https://*.rallit.com/*",
+    "https://*.rocketpunch.com/*",
+    "https://*.linkedin.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Capture job postings"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.saramin.co.kr/*",
+        "https://*.jobkorea.co.kr/*",
+        "https://*.wanted.co.kr/*",
+        "https://*.rallit.com/*",
+        "https://*.rocketpunch.com/*",
+        "https://*.linkedin.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Recruit Capture</title>
+    <style>
+      body {
+        min-width: 280px;
+        margin: 0;
+        padding: 14px;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #172033;
+        background: #f8fafc;
+      }
+      h1 {
+        margin: 0 0 10px;
+        font-size: 15px;
+        font-weight: 700;
+      }
+      button {
+        width: 100%;
+        height: 36px;
+        border: 1px solid #1e40af;
+        border-radius: 6px;
+        background: #2563eb;
+        color: white;
+        font-size: 13px;
+        font-weight: 650;
+        cursor: pointer;
+      }
+      button:disabled {
+        border-color: #94a3b8;
+        background: #94a3b8;
+        cursor: default;
+      }
+      #status {
+        min-height: 34px;
+        margin-top: 10px;
+        font-size: 12px;
+        line-height: 1.4;
+        color: #475569;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Recruit Capture</h1>
+    <button id="capture">Capture visible postings</button>
+    <div id="status"></div>
+    <script src="popup.js"></script>
+  </body>
+</html>
