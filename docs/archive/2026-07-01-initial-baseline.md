@@ -12,7 +12,7 @@
 - Saramin public HTTP detail iframe proof 검증 및 `public_http` target enable
 - Wanted no-human browser automation/detail proof 검증 및 `public_http` target enable
 - RocketPunch를 `policy_override_mode=user_directed_ignore` no-human `browser_automation` target으로 enable
-- Repository 문서 오케스트레이션: `AGENTS.md`를 핵심 하네스로 정리하고 `README.md` 내용을 `AGENTS.md`/`TODO.md`/`docs/README.md`로 이관
+- Repository 문서 오케스트레이션: `AGENTS.md`를 핵심 하네스로 정리하고 `README.md` 내용을 `AGENTS.md`/`TODO.md`/`docs/index.md`로 이관
 - 불필요한 런타임 흔적 정리 원칙 확정: GJC는 `.gjc/`, 과거 `.omx/` 흔적은 보존 대상에서 제외
 
 ## Baseline 상태
