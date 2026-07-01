@@ -30,6 +30,36 @@ class Profile:
     exclusions: List[str] = field(default_factory=list)
     private_canaries: List[str] = field(default_factory=list)
 
+@dataclass(frozen=True)
+class UserContext:
+    desired_roles: List[str]
+    skills: List[str]
+    preferred_locations: List[str]
+    max_experience_years: int = 0
+    explicit_deal_breakers: List[str] = field(default_factory=list)
+    missing_context: List[str] = field(default_factory=list)
+    provenance: Dict[str, str] = field(default_factory=dict)
+    private_canaries: List[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class FeedbackEvent:
+    posting_id: str
+    verdict: str
+    reason: str
+    created_at: datetime
+    movement: str = "same"
+
+
+@dataclass(frozen=True)
+class RelevanceCase:
+    case_id: str
+    user_context: UserContext
+    snapshot: "JDSnapshot"
+    expected_verdict: str
+    expected_movement: str = "same"
+    rationale: str = ""
+
 
 @dataclass(frozen=True)
 class SourceManifest:
@@ -68,6 +98,7 @@ class AppConfig:
     thresholds: Thresholds
     scoring_weights: ScoringWeights
     profile: Profile
+    user_context: UserContext
     sources: List[SourceManifest]
 
 
@@ -114,6 +145,9 @@ class FitAssessment:
     verification_questions: List[str]
     positioning_seed: str
 
+    verdict: str = ""
+    missing_context_signals: List[str] = field(default_factory=list)
+    deal_breaker_hits: List[str] = field(default_factory=list)
 
 @dataclass(frozen=True)
 class RunSummary:

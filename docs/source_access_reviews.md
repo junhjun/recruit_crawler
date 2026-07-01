@@ -23,6 +23,18 @@
 
 Decision: 회사별 robots/access review, allowlist, fixture/parser test가 모두 있는 경우에만 개별 `public_http` target으로 enable합니다.
 
+## Company-careers V1 gate
+
+Four distinct company-careers candidates were reviewed for the V1 expansion gate. Existing aggregator sources and LinkedIn do not count.
+
+| Candidate | Source ID | Decision | Target lane | Evidence |
+| --- | --- | --- | --- | --- |
+| NAVER Careers | `naver_careers` | deferred | deferred | Public careers pages are reachable without login, but the observed listing uses `/rcrt/loadJobList.do` and the generic adapter produced 0 live candidates; requires a source-specific AJAX/detail parser before enablement. |
+| Kakao Careers | `kakao_careers` | deferred | deferred | Public careers shell is reachable without login, but it is SPA-rendered and the generic adapter produced 0 live candidates; requires a source-specific SPA/API/detail parser before enablement. |
+| LINE Careers | `line_careers` | fallback | deferred | Public careers pages are plausible and filterable, but not selected for the two-source V1 count. |
+| Coupang Careers | `coupang_careers` | fallback | deferred | Public careers pages are plausible and filterable, but not selected for the two-source V1 count. |
+
+Decision: keep all company-careers candidates deferred for V1 ingestion until a source-specific parser produces non-zero persisted candidates in live evidence. No manual/user-operated/OCR/API/partner path is used for the V1 source count.
 ## 사람인
 
 - Source ID: `saramin`
