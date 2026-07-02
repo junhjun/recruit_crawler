@@ -48,6 +48,53 @@ def profile_from_context(context: UserContext) -> Profile:
     )
 
 
+def merge_user_contexts(contexts: Sequence[UserContext]) -> UserContext:
+    def append_unique(existing: List[str], values: Sequence[str]) -> List[str]:
+        seen = {item.lower() for item in existing}
+        merged = list(existing)
+        for value in values:
+            if value.lower() not in seen:
+                merged.append(value)
+                seen.add(value.lower())
+        return merged
+
+    desired_roles: List[str] = []
+    skills: List[str] = []
+    preferred_locations: List[str] = []
+    explicit_deal_breakers: List[str] = []
+    private_canaries: List[str] = []
+    max_experience_years = 0
+    provenance: Dict[str, str] = {}
+    for index, context in enumerate(contexts, start=1):
+        source = f"context_document_{index}"
+        desired_roles = append_unique(desired_roles, context.desired_roles)
+        skills = append_unique(skills, context.skills)
+        preferred_locations = append_unique(preferred_locations, context.preferred_locations)
+        explicit_deal_breakers = append_unique(explicit_deal_breakers, context.explicit_deal_breakers)
+        private_canaries = append_unique(private_canaries, context.private_canaries)
+        max_experience_years = max(max_experience_years, context.max_experience_years)
+        if context.desired_roles:
+            provenance["desired_roles"] = source
+        if context.skills:
+            provenance["skills"] = source
+        if context.preferred_locations:
+            provenance["preferred_locations"] = source
+        if context.max_experience_years > 0:
+            provenance["max_experience_years"] = source
+        if context.explicit_deal_breakers:
+            provenance["explicit_deal_breakers"] = source
+
+    merged_context = UserContext(
+        desired_roles=desired_roles,
+        skills=skills,
+        preferred_locations=preferred_locations,
+        max_experience_years=max_experience_years,
+        explicit_deal_breakers=explicit_deal_breakers,
+        private_canaries=private_canaries,
+        provenance=provenance,
+    )
+    return replace(merged_context, missing_context=missing_context_fields(merged_context))
+
 def missing_context_fields(context: UserContext) -> List[str]:
     missing: List[str] = []
     if not context.desired_roles:

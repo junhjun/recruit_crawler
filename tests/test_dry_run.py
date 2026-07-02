@@ -2492,6 +2492,41 @@ class UserContextCliTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertLess(report.index("Rust Systems Engineer"), report.index("Python ML Engineer"))
 
+    def test_dry_run_context_doc_cli_merges_multiple_personal_inputs(self) -> None:
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(output):
+            tmp_path = Path(tmp)
+            config_path = self._write_two_posting_config(tmp_path)
+            resume_path = tmp_path / "resume.md"
+            portfolio_path = tmp_path / "portfolio.md"
+            resume_path.write_text(
+                "Roles: Systems Engineer\nSkills: Rust\nLocations: Seoul\nExperience: 2 years\n",
+                encoding="utf-8",
+            )
+            portfolio_path.write_text(
+                "Skills: distributed systems, Tokio\nLocations: Remote\n",
+                encoding="utf-8",
+            )
+
+            exit_code = cli_main(
+                [
+                    "dry-run",
+                    "--config",
+                    str(config_path),
+                    "--run-date",
+                    "2026-06-30",
+                    "--context-doc",
+                    str(resume_path),
+                    "--context-doc",
+                    str(portfolio_path),
+                    "--print-report",
+                ]
+            )
+
+        report = output.getvalue()
+        self.assertEqual(exit_code, 0)
+        self.assertLess(report.index("Rust Systems Engineer"), report.index("Python ML Engineer"))
+
     def test_context_doc_cli_fails_closed_on_private_canary(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

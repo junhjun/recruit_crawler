@@ -33,17 +33,18 @@ PYTHONPATH=src python3 -m recruit_crawler.cli dry-run \
   --print-report
 ```
 
-Run with a personal context document instead of the sample profile:
+Run with personal context documents instead of the sample profile:
 
 ```sh
 PYTHONPATH=src python3 -m recruit_crawler.cli dry-run \
   --config config/sample_config.json \
   --context-doc path/to/resume.md \
+  --context-doc path/to/portfolio.md \
   --run-date 2026-07-01 \
   --print-report
 ```
 
-`--context-doc` accepts `.txt`, `.md`, `.pdf`, and `.docx` files. `config.profile` is a fallback/default for fixture runs; personalized runs should pass an explicit context document.
+`--context-doc` accepts `.txt`, `.md`, `.pdf`, and `.docx` files and can be repeated for multiple inputs such as resume + portfolio + preference notes. `config.profile` is a fallback/default for fixture runs; personalized runs should pass explicit context documents.
 
 Check source registry status:
 

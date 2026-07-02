@@ -13,7 +13,7 @@ from .capture_import import (
     select_capture_files,
 )
 from .browser_evidence import build_browser_evidence, write_browser_evidence
-from .config import ConfigError, apply_context_document, load_config
+from .config import ConfigError, apply_context_documents, load_config
 from .source_registry import source_status_rows
 from .pipeline import build_live_run_quality_gate, run_capture_import, run_dry_run, run_live_run
 
@@ -31,13 +31,13 @@ def build_parser() -> argparse.ArgumentParser:
     dry_run.add_argument("--config", type=Path, default=Path("config/sample_config.json"))
     dry_run.add_argument("--run-date", help="YYYY-MM-DD date used for deterministic deadline checks")
     dry_run.add_argument("--print-report", action="store_true", help="print generated Markdown to stdout")
-    dry_run.add_argument("--context-doc", type=Path, help="personal context document (.txt, .md, .pdf, .docx)")
+    dry_run.add_argument("--context-doc", type=Path, action="append", help="personal context document; repeat for multiple .txt, .md, .pdf, or .docx inputs")
     live_run = subparsers.add_parser("live-run", help="run enabled reviewed real-source adapters")
     live_run.add_argument("--config", type=Path, default=Path("config/live_sources.sample.json"))
     live_run.add_argument("--run-date", help="YYYY-MM-DD date used for deterministic deadline checks")
     live_run.add_argument("--print-report", action="store_true", help="print generated Markdown to stdout")
     live_run.add_argument("--quality-gate-output", type=Path, help="write live-run source quality gate JSON")
-    live_run.add_argument("--context-doc", type=Path, help="personal context document (.txt, .md, .pdf, .docx)")
+    live_run.add_argument("--context-doc", type=Path, action="append", help="personal context document; repeat for multiple .txt, .md, .pdf, or .docx inputs")
     source_status = subparsers.add_parser("source-status", help="print source registry status without network access")
     source_status.add_argument("--config", type=Path, default=Path("config/live_sources.sample.json"))
     source_status.add_argument("--json", action="store_true", help="print machine-readable registry rows")
@@ -72,7 +72,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         try:
             config = load_config(args.config)
             if args.context_doc:
-                config = apply_context_document(config, args.context_doc)
+                config = apply_context_documents(config, args.context_doc)
             summary, report, _ranked = run_dry_run(config, _parse_date(args.run_date))
         except (ConfigError, ValueError, FileNotFoundError) as exc:
             parser.error(str(exc))
@@ -86,7 +86,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         try:
             config = load_config(args.config, allow_real_sources=True)
             if args.context_doc:
-                config = apply_context_document(config, args.context_doc)
+                config = apply_context_documents(config, args.context_doc)
             summary, report, _ranked = run_live_run(config, _parse_date(args.run_date))
             gate = build_live_run_quality_gate(summary, config)
             if args.quality_gate_output:

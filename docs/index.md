@@ -43,12 +43,13 @@
 PYTHONPATH=src python3 -m recruit_crawler.cli live-run \
   --config config/live_sources.sample.json \
   --context-doc path/to/resume.md \
+  --context-doc path/to/portfolio.md \
   --quality-gate-output artifacts/live_quality_gate.json \
   --run-date 2026-07-01 \
   --print-report
 ```
 
-`config.profile`은 fixture/default fallback입니다. 개인화된 실행은 `.txt`, `.md`, `.pdf`, `.docx` context 문서를 `--context-doc`으로 명시합니다.
+`config.profile`은 fixture/default fallback입니다. 개인화된 실행은 `.txt`, `.md`, `.pdf`, `.docx` context 문서를 `--context-doc`으로 명시합니다. 이 옵션은 여러 번 반복할 수 있으며 resume, portfolio, 선호조건 메모를 합쳐 UserContext를 보강합니다.
 
 현재 대표 리포트:
 
