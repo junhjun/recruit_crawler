@@ -24,6 +24,7 @@
 
 - `TODO.md`는 앞으로 해야 할 일만 담는다. 완료 항목, 상태 스냅샷, 검증 이력은 `docs/archive/`로 옮긴다.
 - GJC workflow나 큰 작업을 마치면 같은 턴에 `TODO.md`에서 완료 항목을 제거하고, 완료 요약을 `docs/archive/YYYY-MM-DD-<topic>.md`에 기록한다.
+- 이 규칙은 `tests.test_dry_run.RepositoryHarnessTests`에서 `TODO.md` 완료 체크박스가 없는지 검사한다. 큰 작업 완료 후 archive 정리를 누락하면 full unittest가 실패해야 한다.
 - `.gjc/`는 로컬 런타임 상태다. 완료 요약은 `.gjc/`에 묻어두지 말고 `docs/archive/`로 승격한다.
 
 ## GitHub / PR 규칙

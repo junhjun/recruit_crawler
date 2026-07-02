@@ -50,6 +50,17 @@ from recruit_crawler.sources.platforms import (
 CONFIG = ROOT / "config" / "sample_config.json"
 
 
+class RepositoryHarnessTests(unittest.TestCase):
+    def test_todo_contains_only_open_backlog_items(self) -> None:
+        todo = (ROOT / "TODO.md").read_text(encoding="utf-8")
+
+        self.assertNotIn("- [x]", todo, "Move completed TODO items into docs/archive before committing")
+
+    def test_archive_contains_completed_work_records(self) -> None:
+        archive_paths = sorted((ROOT / "docs" / "archive").glob("*.md"))
+
+        self.assertTrue(archive_paths, "Completed work records belong under docs/archive")
+
 class DryRunTests(unittest.TestCase):
     def test_fixture_e2e_generates_report_without_expired_postings(self) -> None:
         config = load_config(CONFIG)
