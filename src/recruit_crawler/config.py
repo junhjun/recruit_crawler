@@ -6,7 +6,13 @@ from pathlib import Path
 from typing import Any, Dict, Sequence
 
 from .schemas import AppConfig, Profile, ScoringWeights, SourceManifest, Thresholds
-from .user_context import context_from_profile, merge_user_contexts, parse_context_document, profile_from_context
+from .user_context import (
+    context_from_profile,
+    merge_supplemental_answers,
+    merge_user_contexts,
+    parse_context_document,
+    profile_from_context,
+)
 from .source_registry import SourceRegistryError, validate_source_registry
 
 
@@ -133,3 +139,8 @@ def apply_context_documents(config: AppConfig, paths: Sequence[Path]) -> AppConf
 
 def apply_context_document(config: AppConfig, path: Path) -> AppConfig:
     return apply_context_documents(config, [path])
+
+
+def apply_supplemental_answers(config: AppConfig, answers: Dict[str, str]) -> AppConfig:
+    context = merge_supplemental_answers(config.user_context, answers)
+    return replace(config, profile=profile_from_context(context), user_context=context)

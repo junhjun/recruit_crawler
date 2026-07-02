@@ -2527,6 +2527,38 @@ class UserContextCliTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertLess(report.index("Rust Systems Engineer"), report.index("Python ML Engineer"))
 
+    def test_context_doc_cli_interviews_for_missing_context(self) -> None:
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(output), patch(
+            "builtins.input",
+            side_effect=["Rust, distributed systems, Tokio", "2"],
+        ):
+            tmp_path = Path(tmp)
+            config_path = self._write_two_posting_config(tmp_path)
+            context_path = tmp_path / "partial.md"
+            context_path.write_text(
+                "Roles: Systems Engineer\nLocations: Seoul\n",
+                encoding="utf-8",
+            )
+
+            exit_code = cli_main(
+                [
+                    "dry-run",
+                    "--config",
+                    str(config_path),
+                    "--run-date",
+                    "2026-06-30",
+                    "--context-doc",
+                    str(context_path),
+                    "--print-report",
+                ]
+            )
+
+        report = output.getvalue()
+        self.assertEqual(exit_code, 0)
+        self.assertIn("Supplemental context interview:", report)
+        self.assertLess(report.index("Rust Systems Engineer"), report.index("Python ML Engineer"))
+
     def test_context_doc_cli_fails_closed_on_private_canary(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

@@ -46,6 +46,8 @@ PYTHONPATH=src python3 -m recruit_crawler.cli dry-run \
 
 `--context-doc` accepts `.txt`, `.md`, `.pdf`, and `.docx` files and can be repeated for multiple inputs such as resume + portfolio + preference notes. `config.profile` is a fallback/default for fixture runs; personalized runs should pass explicit context documents.
 
+When supplied context documents are missing required fields, the CLI starts a supplemental interview and asks only for the missing role, skill, location, or experience fields before scoring.
+
 Check source registry status:
 
 ```sh

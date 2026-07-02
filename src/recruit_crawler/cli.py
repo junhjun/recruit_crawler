@@ -13,7 +13,7 @@ from .capture_import import (
     select_capture_files,
 )
 from .browser_evidence import build_browser_evidence, write_browser_evidence
-from .config import ConfigError, apply_context_documents, load_config
+from .config import ConfigError, apply_context_documents, apply_supplemental_answers, load_config
 from .source_registry import source_status_rows
 from .pipeline import build_live_run_quality_gate, run_capture_import, run_dry_run, run_live_run
 
@@ -22,6 +22,27 @@ def _parse_date(value: Optional[str]) -> date:
     if not value:
         return date.today()
     return date.fromisoformat(value)
+
+
+def _apply_supplemental_interview(config):
+    from .user_context import missing_context_fields, supplemental_questions
+
+    missing_fields = missing_context_fields(config.user_context)
+    if not missing_fields:
+        return config
+    questions = supplemental_questions(config.user_context)
+    answers = {}
+    print("Supplemental context interview:")
+    for field, question in zip(missing_fields, questions):
+        try:
+            answer = input(f"{question} ")
+        except EOFError as exc:
+            raise ConfigError(f"missing context requires supplemental answer for {field}") from exc
+        if answer.strip():
+            answers[field] = answer.strip()
+    if not answers:
+        return config
+    return apply_supplemental_answers(config, answers)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -73,6 +94,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             config = load_config(args.config)
             if args.context_doc:
                 config = apply_context_documents(config, args.context_doc)
+                config = _apply_supplemental_interview(config)
             summary, report, _ranked = run_dry_run(config, _parse_date(args.run_date))
         except (ConfigError, ValueError, FileNotFoundError) as exc:
             parser.error(str(exc))
@@ -87,6 +109,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             config = load_config(args.config, allow_real_sources=True)
             if args.context_doc:
                 config = apply_context_documents(config, args.context_doc)
+                config = _apply_supplemental_interview(config)
             summary, report, _ranked = run_live_run(config, _parse_date(args.run_date))
             gate = build_live_run_quality_gate(summary, config)
             if args.quality_gate_output:

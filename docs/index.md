@@ -51,6 +51,8 @@ PYTHONPATH=src python3 -m recruit_crawler.cli live-run \
 
 `config.profile`은 fixture/default fallback입니다. 개인화된 실행은 `.txt`, `.md`, `.pdf`, `.docx` context 문서를 `--context-doc`으로 명시합니다. 이 옵션은 여러 번 반복할 수 있으며 resume, portfolio, 선호조건 메모를 합쳐 UserContext를 보강합니다.
 
+Context 문서에서 필수 필드가 부족하면 CLI는 scoring 전에 보충 interview를 실행해 누락된 직무/기술/근무지/경력 정보를 입력받습니다.
+
 현재 대표 리포트:
 
 - `reports/recruiting-live-run-2026-07-01.md`
