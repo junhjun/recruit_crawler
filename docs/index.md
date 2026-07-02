@@ -42,9 +42,13 @@
 ```sh
 PYTHONPATH=src python3 -m recruit_crawler.cli live-run \
   --config config/live_sources.sample.json \
+  --context-doc path/to/resume.md \
+  --quality-gate-output artifacts/live_quality_gate.json \
   --run-date 2026-07-01 \
   --print-report
 ```
+
+`config.profile`은 fixture/default fallback입니다. 개인화된 실행은 `.txt`, `.md`, `.pdf`, `.docx` context 문서를 `--context-doc`으로 명시합니다.
 
 현재 대표 리포트:
 

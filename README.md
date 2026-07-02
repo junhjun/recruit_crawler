@@ -3,7 +3,7 @@
 # Recruit Crawler
 
 <strong>Local recruiting-source crawler and ranking pipeline.</strong><br />
-Collect public job postings, parse structured JD fields, score them against a local profile, and write Korean Markdown reports.
+Collect public job postings, parse structured JD fields, score them against a local user context, and write Korean Markdown reports.
 
 </div>
 
@@ -32,6 +32,18 @@ PYTHONPATH=src python3 -m recruit_crawler.cli dry-run \
   --run-date 2026-07-01 \
   --print-report
 ```
+
+Run with a personal context document instead of the sample profile:
+
+```sh
+PYTHONPATH=src python3 -m recruit_crawler.cli dry-run \
+  --config config/sample_config.json \
+  --context-doc path/to/resume.md \
+  --run-date 2026-07-01 \
+  --print-report
+```
+
+`--context-doc` accepts `.txt`, `.md`, `.pdf`, and `.docx` files. `config.profile` is a fallback/default for fixture runs; personalized runs should pass an explicit context document.
 
 Check source registry status:
 
@@ -65,4 +77,5 @@ PYTHONPATH=src python3 -m unittest discover -s tests
 - `dry-run` does not use the network.
 - `personal_info/` is ignored and is not read by the dry-run pipeline.
 - Reports are written under ignored `reports/`.
+- Personal context documents are read only when passed with `--context-doc`; parser fixtures under `fixtures/user_context/` are not product defaults.
 - Raw JD bodies and browser profile artifacts should not be committed.

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Dict
 
 from .schemas import AppConfig, Profile, ScoringWeights, SourceManifest, Thresholds
-from .user_context import context_from_profile
+from .user_context import context_from_profile, parse_context_document, profile_from_context
 from .source_registry import SourceRegistryError, validate_source_registry
 
 
@@ -122,3 +123,8 @@ def load_config(path: Path, *, allow_real_sources: bool = False) -> AppConfig:
         user_context=context_from_profile(profile),
         sources=sources,
     )
+
+
+def apply_context_document(config: AppConfig, path: Path) -> AppConfig:
+    context = parse_context_document(path)
+    return replace(config, profile=profile_from_context(context), user_context=context)
