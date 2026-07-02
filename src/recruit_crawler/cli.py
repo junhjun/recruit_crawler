@@ -35,7 +35,7 @@ def _apply_supplemental_interview(config):
     print("Supplemental context interview:")
     for field, question in zip(missing_fields, questions):
         try:
-            answer = input(f"{question} ")
+            answer = input(f"- {question}\n> ")
         except EOFError as exc:
             raise ConfigError(f"missing context requires supplemental answer for {field}") from exc
         if answer.strip():
