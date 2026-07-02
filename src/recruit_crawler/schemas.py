@@ -150,6 +150,15 @@ class FitAssessment:
     deal_breaker_hits: List[str] = field(default_factory=list)
 
 @dataclass(frozen=True)
+class SourceRunMetric:
+    source_id: str
+    attempted: bool
+    candidate_count: int
+    error_count: int = 0
+    errors: List[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class RunSummary:
     run_date: date
     sources_attempted: List[str]
@@ -160,3 +169,4 @@ class RunSummary:
     expired_excluded: int
     ranked_count: int
     report_path: Path
+    source_metrics: List[SourceRunMetric] = field(default_factory=list)

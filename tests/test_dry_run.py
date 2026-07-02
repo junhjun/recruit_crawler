@@ -17,7 +17,7 @@ from recruit_crawler.config import ConfigError, load_config
 from recruit_crawler.cli import main as cli_main
 from recruit_crawler.capture_import import build_capture_quality_gate, import_capture_files, select_capture_files
 from recruit_crawler.jd_parser import parse_deadline
-from recruit_crawler.pipeline import run_capture_import, run_dry_run, run_live_run
+from recruit_crawler.pipeline import build_live_run_quality_gate, run_capture_import, run_dry_run, run_live_run
 from recruit_crawler.browser_evidence import build_browser_evidence, _redact
 from recruit_crawler.relevance import evaluate_relevance_cases
 from recruit_crawler.scorer import score_snapshot
@@ -203,6 +203,8 @@ class DryRunTests(unittest.TestCase):
             summary, _report, ranked = run_dry_run(config, date(2026, 6, 30))
 
         self.assertEqual(summary.sources_attempted, ["fixture"])
+        self.assertEqual(summary.source_metrics[0].source_id, "fixture")
+        self.assertEqual(summary.source_metrics[0].candidate_count, summary.candidates_collected)
         self.assertEqual(len(ranked), raw["top_n"])
 
     def test_live_config_can_load_reviewed_real_sources(self) -> None:
@@ -227,6 +229,93 @@ class DryRunTests(unittest.TestCase):
             config = load_config(config_path, allow_real_sources=True)
 
         self.assertEqual(config.sources[0].source_id, "company_careers")
+
+    def test_live_run_records_source_level_candidate_metrics(self) -> None:
+        raw = json.loads(CONFIG.read_text(encoding="utf-8"))
+        postings = [
+            {
+                "source_id": "fixture",
+                "source_url": "https://jobs.example.test/source-metric",
+                "source_posting_id": "source-metric",
+                "title": "ML Engineer",
+                "company": "Metric Co",
+                "location": "Seoul",
+                "deadline": "2026-07-10",
+                "raw_jd": {
+                    "required_qualifications": ["Python", "machine learning"],
+                    "preferred_qualifications": ["PyTorch"],
+                    "responsibilities": ["Build ML systems"],
+                    "company_info": ["AI team"],
+                    "experience_tags": ["경력무관"],
+                },
+            }
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            config_path = tmp_path / "config.json"
+            fixture_path = tmp_path / "postings.json"
+            raw["fixture_path"] = str(fixture_path)
+            raw["output_dir"] = str(tmp_path / "reports")
+            config_path.write_text(json.dumps(raw), encoding="utf-8")
+            fixture_path.write_text(json.dumps(postings), encoding="utf-8")
+            config = load_config(config_path, allow_real_sources=True)
+            summary, _report, _ranked = run_live_run(config, date(2026, 6, 30))
+
+        self.assertEqual(len(summary.source_metrics), 1)
+        self.assertEqual(summary.source_metrics[0].source_id, "fixture")
+        self.assertTrue(summary.source_metrics[0].attempted)
+        self.assertEqual(summary.source_metrics[0].candidate_count, 1)
+        self.assertEqual(summary.source_metrics[0].error_count, 0)
+
+    def test_live_run_quality_gate_fails_enabled_source_with_zero_candidates(self) -> None:
+        raw = json.loads(CONFIG.read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            config_path = tmp_path / "config.json"
+            fixture_path = tmp_path / "postings.json"
+            raw["fixture_path"] = str(fixture_path)
+            raw["output_dir"] = str(tmp_path / "reports")
+            config_path.write_text(json.dumps(raw), encoding="utf-8")
+            fixture_path.write_text("[]", encoding="utf-8")
+            config = load_config(config_path, allow_real_sources=True)
+            summary, _report, _ranked = run_live_run(config, date(2026, 6, 30))
+            gate = build_live_run_quality_gate(summary, config)
+
+        self.assertEqual(gate["status"], "fail")
+        self.assertEqual(gate["sources"][0]["source_id"], "fixture")
+        self.assertEqual(gate["sources"][0]["candidate_count"], 0)
+        self.assertTrue(any("enabled source fixture collected 0 candidates" in finding["message"] for finding in gate["findings"]))
+
+    def test_live_run_cli_writes_quality_gate_json(self) -> None:
+        raw = json.loads(CONFIG.read_text(encoding="utf-8"))
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(output):
+            tmp_path = Path(tmp)
+            config_path = tmp_path / "config.json"
+            fixture_path = tmp_path / "postings.json"
+            gate_path = tmp_path / "live_quality_gate.json"
+            raw["fixture_path"] = str(fixture_path)
+            raw["output_dir"] = str(tmp_path / "reports")
+            config_path.write_text(json.dumps(raw), encoding="utf-8")
+            fixture_path.write_text("[]", encoding="utf-8")
+
+            exit_code = cli_main(
+                [
+                    "live-run",
+                    "--config",
+                    str(config_path),
+                    "--run-date",
+                    "2026-06-30",
+                    "--quality-gate-output",
+                    str(gate_path),
+                ]
+            )
+
+            gate = json.loads(gate_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(gate["status"], "fail")
+        self.assertIn("Live-run quality gate status: fail", output.getvalue())
 
     def test_public_jobs_adapter_extracts_json_ld_job_posting(self) -> None:
         manifest = SourceManifest(

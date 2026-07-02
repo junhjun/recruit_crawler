@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Iterable, Tuple
+from typing import Any, Iterable, Optional, Tuple
 
 from .config import ConfigError, load_config
 from .dedupe import dedupe_snapshots
 from .jd_parser import parse_candidates
 from .report_writer import write_report
-from .schemas import AppConfig, FitAssessment, PostingCandidate, RunSummary
+from .schemas import AppConfig, FitAssessment, PostingCandidate, RunSummary, SourceRunMetric
 from .scorer import exceeds_experience_limit, is_expired, rank_snapshots
 from .sources.base import build_source_adapter
 from .summarizer import render_markdown_report
@@ -29,6 +29,26 @@ def _assert_no_real_sources(config: AppConfig) -> None:
         )
 
 
+def _source_metrics_from_candidates(
+    sources_attempted: list[str],
+    candidates: list[PostingCandidate],
+    source_errors: list[str],
+) -> list[SourceRunMetric]:
+    metrics = []
+    for source_id in sources_attempted:
+        errors = [error for error in source_errors if error.startswith(f"{source_id}:")]
+        metrics.append(
+            SourceRunMetric(
+                source_id=source_id,
+                attempted=True,
+                candidate_count=sum(1 for candidate in candidates if candidate.source_id == source_id),
+                error_count=len(errors),
+                errors=errors,
+            )
+        )
+    return metrics
+
+
 def _rank_candidates(
     config: AppConfig,
     run_date: date,
@@ -37,8 +57,10 @@ def _rank_candidates(
     source_errors: list[str],
     *,
     report_slug: str,
+    source_metrics: Optional[list[SourceRunMetric]] = None,
 ) -> Tuple[RunSummary, str, list[FitAssessment]]:
     candidates = list(candidates)
+    source_metrics = source_metrics or _source_metrics_from_candidates(sources_attempted, candidates, source_errors)
     snapshots = parse_candidates(candidates)
     deduped, duplicates_removed = dedupe_snapshots(snapshots)
     experience_eligible = [
@@ -59,6 +81,7 @@ def _rank_candidates(
         expired_excluded=expired_excluded,
         ranked_count=len(ranked),
         report_path=config.output_dir / "pending.md",
+        source_metrics=source_metrics,
     )
     content = render_markdown_report(placeholder_summary, ranked)
     report_path = write_report(config.output_dir, run_date, content, report_slug=report_slug)
@@ -72,6 +95,7 @@ def _rank_candidates(
         expired_excluded=expired_excluded,
         ranked_count=len(ranked),
         report_path=report_path,
+        source_metrics=source_metrics,
     )
     content = render_markdown_report(summary, ranked)
     report_path.write_text(content, encoding="utf-8")
@@ -88,18 +112,34 @@ def _run_pipeline(
     sources_attempted = [source.source_id for source in enabled_sources]
     candidates = []
     source_errors = []
+    source_metrics = []
     for source in enabled_sources:
         adapter = build_source_adapter(source, config.fixture_path)
+        source_candidates = []
+        errors = []
         try:
-            candidates.extend(adapter.collect())
-            source_errors.extend(
+            source_candidates = adapter.collect()
+            candidates.extend(source_candidates)
+            errors = [
                 f"{source.source_id}: {error}"
                 for error in getattr(adapter, "errors", [])
-            )
+            ]
+            source_errors.extend(errors)
         except Exception as exc:
             if source.failure_mode == "fail_run":
                 raise
-            source_errors.append(f"{source.source_id}: {exc}")
+
+            errors = [f"{source.source_id}: {exc}"]
+            source_errors.extend(errors)
+        source_metrics.append(
+            SourceRunMetric(
+                source_id=source.source_id,
+                attempted=True,
+                candidate_count=len(source_candidates),
+                error_count=len(errors),
+                errors=errors,
+            )
+        )
     return _rank_candidates(
         config,
         run_date,
@@ -107,6 +147,7 @@ def _run_pipeline(
         sources_attempted,
         source_errors,
         report_slug=report_slug,
+        source_metrics=source_metrics,
     )
 
 
@@ -117,6 +158,60 @@ def run_dry_run(config: AppConfig, run_date: date) -> Tuple[RunSummary, str, lis
 
 def run_live_run(config: AppConfig, run_date: date) -> Tuple[RunSummary, str, list[FitAssessment]]:
     return _run_pipeline(config, run_date, report_slug="recruiting-live-run")
+
+
+def build_live_run_quality_gate(summary: RunSummary, config: AppConfig) -> dict[str, Any]:
+    enabled_source_ids = {source.source_id for source in config.sources if source.enabled}
+    findings = []
+    source_rows = []
+    for metric in summary.source_metrics:
+        enabled = metric.source_id in enabled_source_ids
+        row = {
+            "source_id": metric.source_id,
+            "enabled": enabled,
+            "attempted": metric.attempted,
+            "candidate_count": metric.candidate_count,
+            "error_count": metric.error_count,
+            "errors": metric.errors,
+        }
+        source_rows.append(row)
+        if enabled and metric.attempted and metric.candidate_count == 0:
+            findings.append(
+                {
+                    "severity": "fail",
+                    "source_id": metric.source_id,
+                    "message": f"enabled source {metric.source_id} collected 0 candidates",
+                }
+            )
+        for error in metric.errors:
+            findings.append(
+                {
+                    "severity": "warning",
+                    "source_id": metric.source_id,
+                    "message": error,
+                }
+            )
+
+    missing_attempts = enabled_source_ids - {metric.source_id for metric in summary.source_metrics}
+    for source_id in sorted(missing_attempts):
+        findings.append(
+            {
+                "severity": "fail",
+                "source_id": source_id,
+                "message": f"enabled source {source_id} was not attempted",
+            }
+        )
+
+    status = "fail" if any(item["severity"] == "fail" for item in findings) else "pass"
+    return {
+        "schema_version": 1,
+        "status": status,
+        "run_date": summary.run_date.isoformat(),
+        "sources_attempted": summary.sources_attempted,
+        "candidates_collected": summary.candidates_collected,
+        "sources": source_rows,
+        "findings": findings,
+    }
 
 
 def run_capture_import(

@@ -15,7 +15,7 @@ from .capture_import import (
 from .browser_evidence import build_browser_evidence, write_browser_evidence
 from .config import ConfigError, load_config
 from .source_registry import source_status_rows
-from .pipeline import run_capture_import, run_dry_run, run_live_run
+from .pipeline import build_live_run_quality_gate, run_capture_import, run_dry_run, run_live_run
 
 
 def _parse_date(value: Optional[str]) -> date:
@@ -35,6 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
     live_run.add_argument("--config", type=Path, default=Path("config/live_sources.sample.json"))
     live_run.add_argument("--run-date", help="YYYY-MM-DD date used for deterministic deadline checks")
     live_run.add_argument("--print-report", action="store_true", help="print generated Markdown to stdout")
+    live_run.add_argument("--quality-gate-output", type=Path, help="write live-run source quality gate JSON")
     source_status = subparsers.add_parser("source-status", help="print source registry status without network access")
     source_status.add_argument("--config", type=Path, default=Path("config/live_sources.sample.json"))
     source_status.add_argument("--json", action="store_true", help="print machine-readable registry rows")
@@ -81,13 +82,20 @@ def main(argv: Optional[list[str]] = None) -> int:
         try:
             config = load_config(args.config, allow_real_sources=True)
             summary, report, _ranked = run_live_run(config, _parse_date(args.run_date))
+            gate = build_live_run_quality_gate(summary, config)
+            if args.quality_gate_output:
+                args.quality_gate_output.parent.mkdir(parents=True, exist_ok=True)
+                args.quality_gate_output.write_text(json.dumps(gate, ensure_ascii=False, indent=2), encoding="utf-8")
         except (ConfigError, ValueError, FileNotFoundError) as exc:
             parser.error(str(exc))
             return 2
         print(f"Report written: {summary.report_path}")
+        print(f"Live-run quality gate status: {gate['status']}")
+        if args.quality_gate_output:
+            print(f"Live-run quality gate written: {args.quality_gate_output}")
         if args.print_report:
             print(report)
-        return 0
+        return 1 if gate["status"] == "fail" else 0
     if args.command == "source-status":
         try:
             config = load_config(args.config, allow_real_sources=True)

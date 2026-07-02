@@ -89,6 +89,12 @@ def render_markdown_report(summary: RunSummary, assessments: List[FitAssessment]
         f"- **낮은 우선순위**: {bucket_counts.get('low_priority', 0)}개",
         f"- 수집 {summary.candidates_collected}개 -> 중복 제외 {summary.duplicates_removed}개 -> 경력 초과 제외 {summary.experience_excluded}개 -> 마감 제외 {summary.expired_excluded}개 -> 최종 {summary.ranked_count}개",
         f"- 확인한 소스: {', '.join(summary.sources_attempted) or '없음'}",
+        "- 소스별 수집: "
+        + (
+            ", ".join(f"{metric.source_id}={metric.candidate_count}" for metric in summary.source_metrics)
+            if summary.source_metrics
+            else "없음"
+        ),
     ]
     if summary.source_errors:
         lines.append(f"- 소스 오류: {len(summary.source_errors)}개")
