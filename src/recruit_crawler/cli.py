@@ -1,48 +1,40 @@
 from __future__ import annotations
 
 import argparse
-import json
-from datetime import date
+from collections.abc import Callable
 from pathlib import Path
 from typing import Optional
 
-from .capture_import import (
-    CaptureImportError,
-    build_capture_quality_gate,
-    import_capture_files,
-    select_capture_files,
+from .cli_handlers import (
+    handle_browser_evidence,
+    handle_capture_import,
+    handle_capture_quality_gate,
+    handle_dry_run,
+    handle_feedback_add,
+    handle_feedback_export,
+    handle_live_run,
+    handle_scheduled_history,
+    handle_scheduled_run,
+    handle_source_status,
+    handle_status_report,
 )
-from .browser_evidence import build_browser_evidence, write_browser_evidence
-from .config import ConfigError, apply_context_documents, apply_supplemental_answers, load_config
-from .source_registry import source_status_rows
-from .pipeline import build_live_run_quality_gate, run_capture_import, run_dry_run, run_live_run
 
 
-def _parse_date(value: Optional[str]) -> date:
-    if not value:
-        return date.today()
-    return date.fromisoformat(value)
+CommandHandler = Callable[[argparse.Namespace, argparse.ArgumentParser], int]
 
-
-def _apply_supplemental_interview(config):
-    from .user_context import missing_context_fields, supplemental_questions
-
-    missing_fields = missing_context_fields(config.user_context)
-    if not missing_fields:
-        return config
-    questions = supplemental_questions(config.user_context)
-    answers = {}
-    print("Supplemental context interview:")
-    for field, question in zip(missing_fields, questions):
-        try:
-            answer = input(f"- {question}\n> ")
-        except EOFError as exc:
-            raise ConfigError(f"missing context requires supplemental answer for {field}") from exc
-        if answer.strip():
-            answers[field] = answer.strip()
-    if not answers:
-        return config
-    return apply_supplemental_answers(config, answers)
+_COMMAND_HANDLERS: dict[str, CommandHandler] = {
+    "dry-run": handle_dry_run,
+    "live-run": handle_live_run,
+    "scheduled-run": handle_scheduled_run,
+    "scheduled-history": handle_scheduled_history,
+    "feedback-add": handle_feedback_add,
+    "feedback-export": handle_feedback_export,
+    "source-status": handle_source_status,
+    "capture-import": handle_capture_import,
+    "capture-quality-gate": handle_capture_quality_gate,
+    "browser-evidence": handle_browser_evidence,
+    "status-report": handle_status_report,
+}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -59,6 +51,26 @@ def build_parser() -> argparse.ArgumentParser:
     live_run.add_argument("--print-report", action="store_true", help="print generated Markdown to stdout")
     live_run.add_argument("--quality-gate-output", type=Path, help="write live-run source quality gate JSON")
     live_run.add_argument("--context-doc", type=Path, action="append", help="personal context document; repeat for multiple .txt, .md, .pdf, or .docx inputs")
+    scheduled_run = subparsers.add_parser("scheduled-run", help="run non-interactive daily report for Codex Scheduled")
+    scheduled_run.add_argument("--config", type=Path, default=Path("config/live_sources.sample.json"))
+    scheduled_run.add_argument("--run-date", help="YYYY-MM-DD date used for deterministic deadline checks")
+    scheduled_run.add_argument("--context-doc", type=Path, action="append", help="personal context document; repeat for multiple .txt, .md, .pdf, or .docx inputs")
+    scheduled_run.add_argument("--output-dir", type=Path, help="directory for scheduled Markdown reports")
+    scheduled_run.add_argument("--quality-gate-output", type=Path, required=True, help="write scheduled-run quality gate JSON")
+    scheduled_run.add_argument("--db-path", type=Path, help="optional future SQLite persistence path; accepted for contract stability")
+    scheduled_history = subparsers.add_parser("scheduled-history", help="export persisted scheduled-run history")
+    scheduled_history.add_argument("--db-path", type=Path, required=True)
+    scheduled_history.add_argument("--json", action="store_true", help="print machine-readable run history")
+    feedback = subparsers.add_parser("feedback-add", help="record feedback for a persisted recommendation")
+    feedback.add_argument("--db-path", type=Path, required=True)
+    feedback.add_argument("--recommendation-id", required=True)
+    feedback.add_argument("--verdict", required=True, choices=["applied", "ignored", "hidden", "false_positive", "false_negative", "interesting", "not_relevant"])
+    feedback.add_argument("--reason", required=True)
+    feedback.add_argument("--movement", default="same", choices=["up", "down", "same"])
+    feedback.add_argument("--created-at", help="ISO timestamp for deterministic imports/tests")
+    feedback_export = subparsers.add_parser("feedback-export", help="export persisted feedback events")
+    feedback_export.add_argument("--db-path", type=Path, required=True)
+    feedback_export.add_argument("--json", action="store_true", help="print machine-readable feedback events")
     source_status = subparsers.add_parser("source-status", help="print source registry status without network access")
     source_status.add_argument("--config", type=Path, default=Path("config/live_sources.sample.json"))
     source_status.add_argument("--json", action="store_true", help="print machine-readable registry rows")
@@ -82,130 +94,24 @@ def build_parser() -> argparse.ArgumentParser:
     browser_evidence.add_argument("--target-url")
     browser_evidence.add_argument("--fixture-html", type=Path)
     browser_evidence.add_argument("--output", type=Path, required=True)
+    status_report = subparsers.add_parser("status-report", help="write or check the current feature status ledger")
+    status_report.add_argument("--config", type=Path, default=Path("config/live_sources.sample.json"))
+    status_report.add_argument("--features", type=Path, default=Path("docs/status/features.json"))
+    status_report.add_argument("--output", type=Path, default=Path("docs/status.md"))
+    status_report.add_argument("--todo", type=Path, default=Path("TODO.md"))
+    status_report.add_argument("--check", action="store_true", help="fail if the generated status report differs from --output")
+    status_report.add_argument("--brief", action="store_true", help="print a token-minimal progress brief without regenerating docs/status.md")
     return parser
 
 
 def main(argv: Optional[list[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-
-    if args.command == "dry-run":
-        try:
-            config = load_config(args.config)
-            if args.context_doc:
-                config = apply_context_documents(config, args.context_doc)
-                config = _apply_supplemental_interview(config)
-            summary, report, _ranked = run_dry_run(config, _parse_date(args.run_date))
-        except (ConfigError, ValueError, FileNotFoundError) as exc:
-            parser.error(str(exc))
-            return 2
-        print(f"Report written: {summary.report_path}")
-        if args.print_report:
-            print(report)
-        return 0
-
-    if args.command == "live-run":
-        try:
-            config = load_config(args.config, allow_real_sources=True)
-            if args.context_doc:
-                config = apply_context_documents(config, args.context_doc)
-                config = _apply_supplemental_interview(config)
-            summary, report, _ranked = run_live_run(config, _parse_date(args.run_date))
-            gate = build_live_run_quality_gate(summary, config)
-            if args.quality_gate_output:
-                args.quality_gate_output.parent.mkdir(parents=True, exist_ok=True)
-                args.quality_gate_output.write_text(json.dumps(gate, ensure_ascii=False, indent=2), encoding="utf-8")
-        except (ConfigError, ValueError, FileNotFoundError) as exc:
-            parser.error(str(exc))
-            return 2
-        print(f"Report written: {summary.report_path}")
-        print(f"Live-run quality gate status: {gate['status']}")
-        if args.quality_gate_output:
-            print(f"Live-run quality gate written: {args.quality_gate_output}")
-        if args.print_report:
-            print(report)
-        return 1 if gate["status"] == "fail" else 0
-    if args.command == "source-status":
-        try:
-            config = load_config(args.config, allow_real_sources=True)
-            rows = source_status_rows(config.sources)
-        except (ConfigError, ValueError, FileNotFoundError) as exc:
-            parser.error(str(exc))
-            return 2
-        if args.json:
-            print(json.dumps({"sources": rows}, ensure_ascii=False, indent=2))
-        else:
-            for row in rows:
-                lane = row["target_lane"] if row["target_lane"] is not None else "null"
-                print(f"{row['source_id']}: {row['target_status']} / {lane} / enabled={row['enabled']}")
-        return 0
-
-    if args.command == "capture-import":
-        try:
-            config = load_config(args.config)
-            selection = select_capture_files(
-                args.spool_dir,
-                run_date=_parse_date(args.capture_date) if args.capture_date else None,
-                latest=args.latest,
-                files=args.files,
-            )
-            imported = import_capture_files(selection.files)
-            summary, report, _ranked = run_capture_import(
-                config,
-                _parse_date(args.run_date) if args.run_date else selection.run_date,
-                imported.candidates,
-                imported.sources_attempted,
-                imported.source_errors,
-            )
-        except (ConfigError, CaptureImportError, ValueError, FileNotFoundError) as exc:
-            parser.error(str(exc))
-            return 2
-        print(f"Imported capture files: {len(selection.files)}")
-        print(f"Imported candidates: {summary.candidates_collected}")
-        print(f"Report written: {summary.report_path}")
-        if args.print_report:
-            print(report)
-        return 0
-
-    if args.command == "capture-quality-gate":
-        try:
-            selection = select_capture_files(
-                args.spool_dir,
-                run_date=_parse_date(args.capture_date) if args.capture_date else None,
-                latest=args.latest,
-                files=args.files,
-            )
-            imported = import_capture_files(selection.files)
-            gate = build_capture_quality_gate(selection, imported)
-            args.output.parent.mkdir(parents=True, exist_ok=True)
-            args.output.write_text(json.dumps(gate, ensure_ascii=False, indent=2), encoding="utf-8")
-        except (CaptureImportError, ValueError, FileNotFoundError) as exc:
-            parser.error(str(exc))
-            return 2
-        print(f"Quality gate written: {args.output}")
-        print(f"Quality gate status: {gate['status']}")
-        return 0
-
-    if args.command == "browser-evidence":
-        try:
-            config = load_config(args.config, allow_real_sources=True)
-            manifest = next((source for source in config.sources if source.source_id == args.source_id), None)
-            if manifest is None:
-                raise ConfigError(f"unknown source_id: {args.source_id}")
-            transcript = build_browser_evidence(
-                manifest,
-                fixture_html=args.fixture_html,
-                target_url=args.target_url,
-            )
-            write_browser_evidence(transcript, args.output)
-        except (ConfigError, ValueError, FileNotFoundError) as exc:
-            parser.error(str(exc))
-            return 2
-        print(f"Browser evidence written: {args.output}")
-        print(f"Browser evidence status: {'passed' if transcript['exit_code'] == 0 else 'failed'}")
-        return int(transcript["exit_code"])
-    parser.error(f"unknown command: {args.command}")
-    return 2
+    handler = _COMMAND_HANDLERS.get(args.command)
+    if handler is None:
+        parser.error(f"unknown command: {args.command}")
+        return 2
+    return handler(args, parser)
 
 
 if __name__ == "__main__":

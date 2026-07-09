@@ -1,22 +1,24 @@
 # Recruit Crawler 문서 인덱스
 
-상태일: 2026-07-01
+상태일: 2026-07-07
 
-이 디렉터리는 사람이 읽는 운영/설계 문서를 보관합니다. 기계 판정 기준은 항상 `config/live_sources.sample.json`과 `source-status --json` 출력입니다.
+이 디렉터리는 사람이 읽는 운영/설계 문서를 보관합니다. 현재 기능 구현 현황의 단일 원장은 `status.md`이며, source 기계 판정 기준은 항상 `config/live_sources.sample.json`과 `source-status --json` 출력입니다.
 
 ## 먼저 읽을 문서
 
-1. `../AGENTS.md`
-   - 에이전트용 핵심 하네스: 구조 탐색, 파일 배치, GJC/TODO 갱신, 브라우저 검증 규칙.
-2. `../TODO.md`
+1. `status.md`
+   - 현재 제품/기능/source/gap 상태판. `docs/status/features.json`과 source registry에서 `status-report`로 생성합니다.
+2. `../AGENTS.md`
+   - 에이전트용 핵심 하네스: 세션 부트스트랩, 구조 탐색, 파일 배치, GJC/TODO 갱신, 브라우저 검증 규칙.
+3. `../TODO.md`
    - 앞으로 해야 할 작업만 담는 간결한 backlog.
-3. `archive/`
-   - 완료된 작업, 상태 스냅샷, 검증 이력 보관.
-4. `source_collection_matrix.md`
+4. `decisions.md`
+   - 오래 유지할 제품/운영 결정만 짧게 기록합니다.
+5. `source_collection_matrix.md`
    - 플랫폼별 `target_status`, `target_lane`, candidate lane, 증거/차단 사유 요약.
-5. `source_search_logic.md`
+6. `source_search_logic.md`
    - 사이트별 검색 URL, discovery 방식, parser marker, fallback parser 상세.
-6. `source_access_reviews.md`
+7. `source_access_reviews.md`
    - source별 access/privacy/ToS 판단과 target enable/block 근거.
 
 ## 보조 문서
@@ -27,13 +29,13 @@
   - 신규 source를 검토할 때 복사해서 쓰는 템플릿.
 - `source_reviews/jobkorea.md`
   - JobKorea 초기 source review 기록. 최신 기계 기준은 `config/live_sources.sample.json`과 `source_access_reviews.md`를 우선합니다.
+- 완료 로그와 세션 요약은 별도 archive로 남기지 않습니다. 현재 상태는 `status.md`, 앞으로 할 일은 `../TODO.md`, 오래 유지할 결정은 `decisions.md`에만 둡니다.
 
 ## 현재 V1 target 상태
 
 - Enabled `public_http`: JobKorea, Saramin, Wanted, Jumpit, Rallit
 - Enabled `browser_automation`: RocketPunch
-- Excluded: LinkedIn
-- Deferred: Company careers
+- Excluded/non-target: LinkedIn, Company careers
 
 ## 결과물 확인
 
@@ -52,6 +54,17 @@ PYTHONPATH=src python3 -m recruit_crawler.cli live-run \
 `config.profile`은 fixture/default fallback입니다. 개인화된 실행은 `.txt`, `.md`, `.pdf`, `.docx` context 문서를 `--context-doc`으로 명시합니다. 이 옵션은 여러 번 반복할 수 있으며 resume, portfolio, 선호조건 메모를 합쳐 UserContext를 보강합니다.
 
 Context 문서에서 필수 필드가 부족하면 CLI는 scoring 전에 보충 interview를 실행해 누락된 직무/기술/근무지/경력 정보를 입력받습니다.
+
+Codex `예약됨` 대상 비대화형 실행은 `scheduled-run`을 사용합니다. 이 명령은 보충 interview를 실행하지 않고, 누락된 context를 quality gate의 `needs_context` 신호로 남깁니다.
+
+```sh
+PYTHONPATH=src python3 -m recruit_crawler.cli scheduled-run \
+  --config config/live_sources.sample.json \
+  --context-doc path/to/resume.md \
+  --run-date 2026-07-01 \
+  --output-dir reports/scheduled \
+  --quality-gate-output artifacts/scheduled/latest_quality_gate.json
+```
 
 현재 대표 리포트:
 
