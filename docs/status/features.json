@@ -1,0 +1,529 @@
+{
+  "updated_at": "2026-07-02",
+  "product_summary": "Codex 예약됨에 등록하도록 설계된 local-first recruiting report service: collect reviewed no-human sources, score against user-owned personal_info/filter rules, persist feedback/history, and generate Korean recommendation reports.",
+  "features": [
+    {
+      "feature_id": "fixture_dry_run",
+      "name": "Fixture dry-run",
+      "category": "pipeline",
+      "status": "done",
+      "user_value": "네트워크 없이 샘플 채용공고 리포트를 생성한다.",
+      "entrypoints": [
+        "recruit-crawler dry-run"
+      ],
+      "code_refs": [
+        "src/recruit_crawler/pipeline.py::run_dry_run",
+        "src/recruit_crawler/cli.py::main"
+      ],
+      "test_refs": [
+        "tests/test_pipeline_flows.py::test_fixture_e2e_generates_report_without_expired_postings"
+      ],
+      "docs_refs": [
+        "README.md"
+      ],
+      "blockers": [],
+      "next_action": ""
+    },
+    {
+      "feature_id": "live_run",
+      "name": "Live-run pipeline",
+      "category": "pipeline",
+      "status": "done",
+      "user_value": "검토된 실제 source adapter에서 후보를 수집하고 랭킹 리포트를 만든다.",
+      "entrypoints": [
+        "recruit-crawler live-run"
+      ],
+      "code_refs": [
+        "src/recruit_crawler/pipeline.py::run_live_run"
+      ],
+      "test_refs": [
+        "tests/test_pipeline_live_flows.py::test_live_run_records_source_level_candidate_metrics"
+      ],
+      "docs_refs": [
+        "docs/index.md",
+        "README.md"
+      ],
+      "blockers": [],
+      "next_action": ""
+    },
+    {
+      "feature_id": "source_registry",
+      "name": "Source registry and status CLI",
+      "category": "source",
+      "status": "done",
+      "user_value": "source별 enabled/deferred/excluded, lane, evidence, blocker를 기계적으로 확인한다.",
+      "entrypoints": [
+        "recruit-crawler source-status"
+      ],
+      "code_refs": [
+        "src/recruit_crawler/source_registry.py::source_status_rows",
+        "src/recruit_crawler/cli.py::main"
+      ],
+      "test_refs": [
+        "tests/test_source_registry.py::test_source_registry_loads_expected_statuses_and_lanes",
+        "tests/test_source_status.py::test_source_status_json_outputs_registry_without_network_or_adapter_construction"
+      ],
+      "docs_refs": [
+        "docs/source_collection_matrix.md",
+        "docs/source_access_reviews.md"
+      ],
+      "blockers": [],
+      "next_action": ""
+    },
+    {
+      "feature_id": "platform_sources",
+      "name": "Core platform source adapters",
+      "category": "source",
+      "status": "done",
+      "user_value": "JobKorea, Saramin, Wanted, Jumpit, Rallit, RocketPunch에서 no-human target 후보를 수집한다.",
+      "entrypoints": [
+        "recruit-crawler live-run"
+      ],
+      "code_refs": [
+        "src/recruit_crawler/sources/platforms.py::JobKoreaAdapter",
+        "src/recruit_crawler/sources/platforms.py::SaraminAdapter",
+        "src/recruit_crawler/sources/platforms.py::WantedAdapter",
+        "src/recruit_crawler/sources/platforms.py::JumpitAdapter",
+        "src/recruit_crawler/sources/platforms.py::RallitAdapter",
+        "src/recruit_crawler/sources/platforms.py::RocketPunchBrowserAutomationAdapter"
+      ],
+      "test_refs": [
+        "tests/test_source_adapters_core.py::test_known_platforms_use_platform_specific_adapters",
+        "tests/test_jobkorea_discovery.py::test_jobkorea_adapter_discovers_ai_jobs_from_api_html",
+        "tests/test_saramin_adapter.py::test_saramin_adapter_discovers_public_relay_detail_urls_from_listing",
+        "tests/test_wanted_adapter.py::test_wanted_adapter_discovers_public_wd_urls_from_listing",
+        "tests/test_jumpit_adapter.py::test_jumpit_adapter_collects_jobs_from_sitemap_and_react_data",
+        "tests/test_rallit_adapter.py::test_rallit_adapter_collects_jobs_from_public_positions",
+        "tests/test_rocketpunch_adapter.py::test_rocketpunch_browser_automation_parses_listing_cards_without_detail_links"
+      ],
+      "docs_refs": [
+        "docs/source_search_logic.md",
+        "docs/source_collection_matrix.md"
+      ],
+      "blockers": [],
+      "next_action": ""
+    },
+    {
+      "feature_id": "company_careers",
+      "name": "Company careers collection",
+      "category": "source",
+      "status": "excluded",
+      "user_value": "회사별 채용 페이지에서 공고를 수집한다.",
+      "entrypoints": [],
+      "code_refs": [
+        "src/recruit_crawler/sources/http.py::PublicJobsHttpAdapter"
+      ],
+      "test_refs": [],
+      "docs_refs": [
+        "docs/source_collection_matrix.md",
+        "docs/source_access_reviews.md"
+      ],
+      "blockers": [
+        "Near-term service goal prioritizes Codex scheduled usage over company-careers expansion",
+        "Company careers require separate source-specific future review"
+      ],
+      "next_action": "Park with LinkedIn-like non-target sources; revisit only after scheduled service, persistence, feedback, and customization are stable."
+    },
+    {
+      "feature_id": "linkedin_automatic_collection",
+      "name": "LinkedIn automatic collection",
+      "category": "source",
+      "status": "excluded",
+      "user_value": "LinkedIn 공고를 자동 수집한다.",
+      "entrypoints": [],
+      "code_refs": [
+        "src/recruit_crawler/sources/platforms.py::LinkedInAdapter"
+      ],
+      "test_refs": [
+        "tests/test_linkedin_adapter.py::test_linkedin_adapter_requires_explicit_approved_access"
+      ],
+      "docs_refs": [
+        "docs/source_collection_matrix.md",
+        "docs/source_access_reviews.md"
+      ],
+      "blockers": [
+        "V1 target에서 제외",
+        "auth/session/privacy risk",
+        "direct scraping/API/partner payload excluded"
+      ],
+      "next_action": "Do not include in V1 automatic collection."
+    },
+    {
+      "feature_id": "jd_parsing",
+      "name": "JD parsing",
+      "category": "scoring",
+      "status": "done",
+      "user_value": "공고 후보를 title/company/location/deadline/requirements/responsibilities 등 구조화된 snapshot으로 변환한다.",
+      "entrypoints": [
+        "internal parse_candidates"
+      ],
+      "code_refs": [
+        "src/recruit_crawler/jd_parser.py::parse_candidate"
+      ],
+      "test_refs": [
+        "tests/test_pipeline_flows.py::test_unknown_deadline_is_uncertain_not_expired",
+        "tests/test_pipeline_flows.py::test_each_selected_posting_has_actionable_report_fields"
+      ],
+      "docs_refs": [
+        "docs/source_search_logic.md"
+      ],
+      "blockers": [],
+      "next_action": ""
+    },
+    {
+      "feature_id": "scoring_ranking",
+      "name": "Scoring and ranking",
+      "category": "scoring",
+      "status": "done",
+      "user_value": "사용자 context와 JD를 비교해 apply/hold/low_priority/exclude 추천을 산출한다.",
+      "entrypoints": [
+        "internal rank_snapshots"
+      ],
+      "code_refs": [
+        "src/recruit_crawler/scorer.py::rank_snapshots",
+        "src/recruit_crawler/scorer.py::score_snapshot"
+      ],
+      "test_refs": [
+        "tests/test_pipeline_flows.py::test_recommendation_buckets_include_apply_hold_and_low_priority",
+        "tests/test_pipeline_live_flows.py::test_live_run_allows_two_years_and_filters_above_profile_limit"
+      ],
+      "docs_refs": [
+        "README.md"
+      ],
+      "blockers": [],
+      "next_action": ""
+    },
+    {
+      "feature_id": "markdown_report",
+      "name": "Korean Markdown report",
+      "category": "reporting",
+      "status": "done",
+      "user_value": "랭킹 결과를 한국어 Markdown 리포트로 저장하고 raw/private marker를 노출하지 않는다.",
+      "entrypoints": [
+        "--print-report",
+        "reports/*.md"
+      ],
+      "code_refs": [
+        "src/recruit_crawler/summarizer.py::render_markdown_report",
+        "src/recruit_crawler/report_writer.py::write_report"
+      ],
+      "test_refs": [
+        "tests/test_pipeline_flows.py::test_report_surface_text_is_korean",
+        "tests/test_pipeline_flows.py::test_report_excludes_raw_jd_and_private_profile_canaries"
+      ],
+      "docs_refs": [
+        "README.md",
+        "docs/index.md"
+      ],
+      "blockers": [],
+      "next_action": ""
+    },
+    {
+      "feature_id": "context_documents",
+      "name": "Context document import",
+      "category": "user_context",
+      "status": "done",
+      "user_value": "이력서/포트폴리오/선호조건 문서를 읽어 개인화 scoring context를 만든다.",
+      "entrypoints": [
+        "--context-doc"
+      ],
+      "code_refs": [
+        "src/recruit_crawler/config.py::apply_context_documents",
+        "src/recruit_crawler/user_context.py::parse_context_document"
+      ],
+      "test_refs": [
+        "tests/test_user_context.py::test_plaintext_context_imports_user_context",
+        "tests/test_user_context_cli.py::test_dry_run_context_doc_cli_merges_multiple_personal_inputs"
+      ],
+      "docs_refs": [
+        "README.md",
+        "docs/index.md"
+      ],
+      "blockers": [],
+      "next_action": ""
+    },
+    {
+      "feature_id": "supplemental_interview",
+      "name": "Supplemental context interview",
+      "category": "user_context",
+      "status": "done",
+      "user_value": "context 문서에 필수 필드가 부족하면 CLI 질문으로 누락값을 보강한다.",
+      "entrypoints": [
+        "--context-doc with missing fields"
+      ],
+      "code_refs": [
+        "src/recruit_crawler/cli_handlers.py::_apply_supplemental_interview",
+        "src/recruit_crawler/user_context.py::supplemental_questions"
+      ],
+      "test_refs": [
+        "tests/test_user_context_cli.py::test_context_doc_cli_interviews_for_missing_context",
+        "tests/test_user_context_cli.py::test_missing_context_generates_questions_and_answers_merge"
+      ],
+      "docs_refs": [
+        "README.md",
+        "docs/index.md"
+      ],
+      "blockers": [],
+      "next_action": ""
+    },
+    {
+      "feature_id": "privacy_boundaries",
+      "name": "Privacy and persisted-field boundaries",
+      "category": "privacy",
+      "status": "done",
+      "user_value": "private canary, raw JD marker, auth/session/private target 정보를 저장하거나 리포트하지 않도록 차단한다.",
+      "entrypoints": [
+        "config allowed_persisted_fields",
+        "browser-evidence",
+        "capture-import"
+      ],
+      "code_refs": [
+        "src/recruit_crawler/user_context.py::_reject_private_text",
+        "src/recruit_crawler/browser_evidence.py::_redact",
+        "src/recruit_crawler/capture_import.py::import_capture_files"
+      ],
+      "test_refs": [
+        "tests/test_user_context.py::test_private_canary_document_fails_closed",
+        "tests/test_capture_import.py::test_capture_import_rejects_sensitive_posting_fields",
+        "tests/test_browser_evidence.py::test_browser_evidence_private_target_fails"
+      ],
+      "docs_refs": [
+        "docs/source_collection_matrix.md",
+        "AGENTS.md"
+      ],
+      "blockers": [],
+      "next_action": ""
+    },
+    {
+      "feature_id": "live_quality_gate",
+      "name": "Live-run quality gate",
+      "category": "quality_gate",
+      "status": "done",
+      "user_value": "enabled source가 후보를 못 모으거나 오류가 나면 JSON gate로 실패를 드러낸다.",
+      "entrypoints": [
+        "live-run --quality-gate-output"
+      ],
+      "code_refs": [
+        "src/recruit_crawler/pipeline.py::build_live_run_quality_gate"
+      ],
+      "test_refs": [
+        "tests/test_pipeline_live_flows.py::test_live_run_quality_gate_fails_enabled_source_with_zero_candidates",
+        "tests/test_pipeline_live_flows.py::test_live_run_cli_writes_quality_gate_json"
+      ],
+      "docs_refs": [
+        "docs/status.md",
+        "docs/index.md"
+      ],
+      "blockers": [],
+      "next_action": ""
+    },
+    {
+      "feature_id": "chrome_extension_capture",
+      "name": "Chrome extension capture/import fallback",
+      "category": "browser_capture",
+      "status": "partial",
+      "user_value": "수동 브라우저 캡처 JSON을 import해 리포트와 quality gate를 만들 수 있다.",
+      "entrypoints": [
+        "browser extension popup",
+        "recruit-crawler capture-import",
+        "recruit-crawler capture-quality-gate"
+      ],
+      "code_refs": [
+        "browser_extension/content.js",
+        "browser_extension/background.js",
+        "src/recruit_crawler/capture_import.py::import_capture_files"
+      ],
+      "test_refs": [
+        "tests/test_capture_import.py::test_capture_import_maps_mixed_sources_and_generates_report",
+        "tests/test_capture_quality.py::test_capture_quality_gate_reports_privacy_and_import_categories"
+      ],
+      "docs_refs": [
+        "docs/chrome_extension_capture.md"
+      ],
+      "blockers": [
+        "manual/user-operated capture is fallback evidence, not target completion evidence"
+      ],
+      "next_action": "Keep as historical/manual fallback and regression fixture path; do not count as target enablement."
+    },
+    {
+      "feature_id": "browser_evidence",
+      "name": "Browser evidence transcript",
+      "category": "quality_gate",
+      "status": "done",
+      "user_value": "브라우저 DOM evidence를 허용 필드만 남긴 transcript로 생성해 source proof를 남긴다.",
+      "entrypoints": [
+        "recruit-crawler browser-evidence"
+      ],
+      "code_refs": [
+        "src/recruit_crawler/browser_evidence.py::build_browser_evidence"
+      ],
+      "test_refs": [
+        "tests/test_browser_evidence.py::test_browser_evidence_fixture_writes_allowed_fields_without_dom_leakage",
+        "tests/test_browser_evidence.py::test_browser_evidence_redacts_private_markers_case_insensitively"
+      ],
+      "docs_refs": [
+        "docs/chrome_extension_capture.md"
+      ],
+      "blockers": [],
+      "next_action": ""
+    },
+    {
+      "feature_id": "feedback_learning_loop",
+      "name": "Feedback learning loop",
+      "category": "scoring",
+      "status": "done",
+      "user_value": "사용자 피드백으로 추천 품질을 개선한다.",
+      "entrypoints": [
+        "recruit-crawler feedback-add",
+        "recruit-crawler feedback-export"
+      ],
+      "code_refs": [
+        "src/recruit_crawler/storage.py::add_feedback_event",
+        "src/recruit_crawler/storage.py::export_feedback_events",
+        "src/recruit_crawler/relevance.py::feedback_events_from_records",
+        "src/recruit_crawler/relevance.py::evaluate_relevance_cases",
+        "src/recruit_crawler/cli.py::feedback-add",
+        "src/recruit_crawler/cli.py::feedback-export"
+      ],
+      "test_refs": [
+        "tests/test_feedback_cli.py::test_feedback_add_records_event_for_persisted_recommendation",
+        "tests/test_feedback_cli.py::test_feedback_add_rejects_private_reason_canary",
+        "tests/test_relevance.py::test_feedback_history_can_drive_deterministic_relevance_movement",
+        "tests/test_relevance.py::test_thirty_seed_relevance_cases_evaluate_deterministically"
+      ],
+      "docs_refs": [
+        "fixtures/relevance_cases.json",
+        "TODO.md"
+      ],
+      "blockers": [],
+      "next_action": ""
+    },
+    {
+      "feature_id": "persistent_history",
+      "name": "Persistent DB/history",
+      "category": "reporting",
+      "status": "partial",
+      "user_value": "매일 실행 결과, 후보, 점수, 피드백, 품질 게이트 이력을 저장하고 재사용한다.",
+      "entrypoints": [
+        "recruit-crawler scheduled-run --db-path",
+        "recruit-crawler scheduled-history"
+      ],
+      "code_refs": [
+        "src/recruit_crawler/storage.py::persist_scheduled_run",
+        "src/recruit_crawler/storage.py::export_runs",
+        "src/recruit_crawler/storage.py::export_recommendations",
+        "src/recruit_crawler/cli.py::scheduled-history"
+      ],
+      "test_refs": [
+        "tests/test_feedback_cli.py::test_scheduled_run_persists_history_without_duplicate_rows",
+        "tests/test_feedback_cli.py::test_feedback_add_records_event_for_persisted_recommendation"
+      ],
+      "docs_refs": [
+        "README.md",
+        "TODO.md"
+      ],
+      "blockers": [
+        "History query surface is minimal and does not yet expose recommendation-change analysis"
+      ],
+      "next_action": "Expand history queries after customization and packaging stabilize."
+    },
+    {
+      "feature_id": "scheduler",
+      "name": "Scheduler/recurring run",
+      "category": "pipeline",
+      "status": "done",
+      "user_value": "Codex/cron 같은 외부 스케줄러에 나중에 연결할 수 있도록 검증된 비대화형 CLI/service contract와 deterministic artifacts를 제공한다.",
+      "entrypoints": [
+        "recruit-crawler scheduled-run"
+      ],
+      "code_refs": [
+        "src/recruit_crawler/scheduled.py::run_scheduled_job",
+        "src/recruit_crawler/cli.py::scheduled-run",
+        "src/recruit_crawler/pipeline.py::run_scheduled_run"
+      ],
+      "test_refs": [
+        "tests/test_scheduled_run.py::test_scheduled_run_writes_contract_quality_gate",
+        "tests/test_scheduled_policy.py::test_scheduled_run_missing_context_is_noninteractive_quality_failure",
+        "tests/test_scheduled_policy.py::test_scheduled_run_rejects_manual_enabled_source_policy",
+        "tests/test_scheduled_run.py::test_scheduled_run_rerun_reuses_stable_identity_and_artifacts",
+        "tests/test_scheduled_policy.py::test_scheduled_run_private_context_uses_privacy_exit_code"
+      ],
+      "docs_refs": [
+        "README.md",
+        "TODO.md"
+      ],
+      "blockers": [],
+      "next_action": ""
+    },
+    {
+      "feature_id": "user_customization_contract",
+      "name": "User customization contract",
+      "category": "user_context",
+      "status": "done",
+      "user_value": "사용자 소유 context 문서와 config 필터/가중치로 개인화된 스케줄 리포트를 만든다.",
+      "entrypoints": [
+        "config/sample_config.json",
+        "config/live_sources.sample.json",
+        "--context-doc",
+        "recruit-crawler scheduled-run"
+      ],
+      "code_refs": [
+        "src/recruit_crawler/config.py::load_config",
+        "src/recruit_crawler/config.py::apply_context_documents",
+        "src/recruit_crawler/scorer.py::score_snapshot",
+        "src/recruit_crawler/cli.py::scheduled-run"
+      ],
+      "test_refs": [
+        "tests/test_user_context.py::test_config_profile_creates_user_context_contract",
+        "tests/test_user_context.py::test_explicit_deal_breaker_excludes_without_raw_leakage",
+        "tests/test_relevance.py::test_config_ranking_weights_affect_scores_deterministically",
+        "tests/test_relevance.py::test_preferred_role_titles_affect_scores_deterministically",
+        "tests/test_relevance.py::test_scoring_weights_must_be_non_negative_and_useful",
+        "tests/test_user_context.py::test_sample_configs_do_not_embed_private_profile_data",
+        "tests/test_scheduled_policy.py::test_scheduled_run_missing_context_is_noninteractive_quality_failure"
+      ],
+      "docs_refs": [
+        "config/sample_config.json",
+        "config/live_sources.sample.json",
+        "README.md"
+      ],
+      "blockers": [],
+      "next_action": ""
+    },
+    {
+      "feature_id": "web_ui",
+      "name": "Codex scheduled onboarding and packaging",
+      "category": "service_productization",
+      "status": "deferred",
+      "user_value": "다른 사용자도 personal_info와 필터링 규칙을 넣어 scheduler-compatible CLI/service contract를 로컬에서 실행할 수 있다.",
+      "entrypoints": [
+        "README.md Codex 예약됨 onboarding",
+        "recruit-crawler scheduled-run",
+        "recruit-crawler feedback-add",
+        "recruit-crawler scheduled-history"
+      ],
+      "code_refs": [
+        "src/recruit_crawler/scheduled.py::run_scheduled_job",
+        "src/recruit_crawler/cli.py::scheduled-run",
+        "src/recruit_crawler/cli.py::feedback-add",
+        "src/recruit_crawler/cli.py::scheduled-history"
+      ],
+      "test_refs": [
+        "tests/test_scheduled_run.py::test_scheduled_run_writes_contract_quality_gate",
+        "tests/test_feedback_cli.py::test_feedback_add_records_event_for_persisted_recommendation",
+        "tests/test_repository_harness.py::test_status_report_is_current"
+      ],
+      "docs_refs": [
+        "README.md",
+        "docs/status.md",
+        "config/live_sources.sample.json",
+        "config/sample_config.json"
+      ],
+      "blockers": [
+        "Web UI/service mode is outside the current scheduled-run CLI product scope",
+        "Source-health maintenance, persistence/history, feedback ingestion, and customization gates must stabilize first"
+      ],
+      "next_action": "Defer web UI/service mode until the scheduled runner, persistence, feedback ingestion, customization, and source health gates are stable."
+    }
+  ]
+}

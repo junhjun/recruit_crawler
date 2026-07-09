@@ -1,0 +1,1064 @@
+{
+  "cases": [
+    {
+      "case_id": "case-00",
+      "context": "sample_config",
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/0",
+        "source_posting_id": "0",
+        "title": "ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Python",
+          "machine learning"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "include",
+      "expected_movement": "up",
+      "rationale": "Seed include relevance case"
+    },
+    {
+      "case_id": "case-01",
+      "context": {
+        "desired_roles": [
+          "ML Engineer"
+        ],
+        "skills": [],
+        "preferred_locations": [
+          "Seoul"
+        ],
+        "max_experience_years": 2,
+        "explicit_deal_breakers": []
+      },
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/1",
+        "source_posting_id": "1",
+        "title": "ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Rust"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "hold",
+      "expected_movement": "same",
+      "rationale": "Seed hold relevance case"
+    },
+    {
+      "case_id": "case-02",
+      "context": {
+        "desired_roles": [
+          "ML Engineer"
+        ],
+        "skills": [
+          "Python"
+        ],
+        "preferred_locations": [
+          "Seoul"
+        ],
+        "max_experience_years": 2,
+        "explicit_deal_breakers": [
+          "unpaid internship"
+        ]
+      },
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/2",
+        "source_posting_id": "2",
+        "title": "Unpaid Internship ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Python"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "exclude",
+      "expected_movement": "down",
+      "rationale": "Seed exclude relevance case"
+    },
+    {
+      "case_id": "case-03",
+      "context": "sample_config",
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/3",
+        "source_posting_id": "3",
+        "title": "ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Python",
+          "machine learning"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "include",
+      "expected_movement": "up",
+      "rationale": "Seed include relevance case"
+    },
+    {
+      "case_id": "case-04",
+      "context": {
+        "desired_roles": [
+          "ML Engineer"
+        ],
+        "skills": [],
+        "preferred_locations": [
+          "Seoul"
+        ],
+        "max_experience_years": 2,
+        "explicit_deal_breakers": []
+      },
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/4",
+        "source_posting_id": "4",
+        "title": "ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Rust"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "hold",
+      "expected_movement": "same",
+      "rationale": "Seed hold relevance case"
+    },
+    {
+      "case_id": "case-05",
+      "context": {
+        "desired_roles": [
+          "ML Engineer"
+        ],
+        "skills": [
+          "Python"
+        ],
+        "preferred_locations": [
+          "Seoul"
+        ],
+        "max_experience_years": 2,
+        "explicit_deal_breakers": [
+          "unpaid internship"
+        ]
+      },
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/5",
+        "source_posting_id": "5",
+        "title": "Unpaid Internship ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Python"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "exclude",
+      "expected_movement": "down",
+      "rationale": "Seed exclude relevance case"
+    },
+    {
+      "case_id": "case-06",
+      "context": "sample_config",
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/6",
+        "source_posting_id": "6",
+        "title": "ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Python",
+          "machine learning"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "include",
+      "expected_movement": "up",
+      "rationale": "Seed include relevance case"
+    },
+    {
+      "case_id": "case-07",
+      "context": {
+        "desired_roles": [
+          "ML Engineer"
+        ],
+        "skills": [],
+        "preferred_locations": [
+          "Seoul"
+        ],
+        "max_experience_years": 2,
+        "explicit_deal_breakers": []
+      },
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/7",
+        "source_posting_id": "7",
+        "title": "ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Rust"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "hold",
+      "expected_movement": "same",
+      "rationale": "Seed hold relevance case"
+    },
+    {
+      "case_id": "case-08",
+      "context": {
+        "desired_roles": [
+          "ML Engineer"
+        ],
+        "skills": [
+          "Python"
+        ],
+        "preferred_locations": [
+          "Seoul"
+        ],
+        "max_experience_years": 2,
+        "explicit_deal_breakers": [
+          "unpaid internship"
+        ]
+      },
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/8",
+        "source_posting_id": "8",
+        "title": "Unpaid Internship ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Python"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "exclude",
+      "expected_movement": "down",
+      "rationale": "Seed exclude relevance case"
+    },
+    {
+      "case_id": "case-09",
+      "context": "sample_config",
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/9",
+        "source_posting_id": "9",
+        "title": "ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Python",
+          "machine learning"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "include",
+      "expected_movement": "up",
+      "rationale": "Seed include relevance case"
+    },
+    {
+      "case_id": "case-10",
+      "context": {
+        "desired_roles": [
+          "ML Engineer"
+        ],
+        "skills": [],
+        "preferred_locations": [
+          "Seoul"
+        ],
+        "max_experience_years": 2,
+        "explicit_deal_breakers": []
+      },
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/10",
+        "source_posting_id": "10",
+        "title": "ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Rust"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "hold",
+      "expected_movement": "same",
+      "rationale": "Seed hold relevance case"
+    },
+    {
+      "case_id": "case-11",
+      "context": {
+        "desired_roles": [
+          "ML Engineer"
+        ],
+        "skills": [
+          "Python"
+        ],
+        "preferred_locations": [
+          "Seoul"
+        ],
+        "max_experience_years": 2,
+        "explicit_deal_breakers": [
+          "unpaid internship"
+        ]
+      },
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/11",
+        "source_posting_id": "11",
+        "title": "Unpaid Internship ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Python"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "exclude",
+      "expected_movement": "down",
+      "rationale": "Seed exclude relevance case"
+    },
+    {
+      "case_id": "case-12",
+      "context": "sample_config",
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/12",
+        "source_posting_id": "12",
+        "title": "ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Python",
+          "machine learning"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "include",
+      "expected_movement": "up",
+      "rationale": "Seed include relevance case"
+    },
+    {
+      "case_id": "case-13",
+      "context": {
+        "desired_roles": [
+          "ML Engineer"
+        ],
+        "skills": [],
+        "preferred_locations": [
+          "Seoul"
+        ],
+        "max_experience_years": 2,
+        "explicit_deal_breakers": []
+      },
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/13",
+        "source_posting_id": "13",
+        "title": "ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Rust"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "hold",
+      "expected_movement": "same",
+      "rationale": "Seed hold relevance case"
+    },
+    {
+      "case_id": "case-14",
+      "context": {
+        "desired_roles": [
+          "ML Engineer"
+        ],
+        "skills": [
+          "Python"
+        ],
+        "preferred_locations": [
+          "Seoul"
+        ],
+        "max_experience_years": 2,
+        "explicit_deal_breakers": [
+          "unpaid internship"
+        ]
+      },
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/14",
+        "source_posting_id": "14",
+        "title": "Unpaid Internship ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Python"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "exclude",
+      "expected_movement": "down",
+      "rationale": "Seed exclude relevance case"
+    },
+    {
+      "case_id": "case-15",
+      "context": "sample_config",
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/15",
+        "source_posting_id": "15",
+        "title": "ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Python",
+          "machine learning"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "include",
+      "expected_movement": "up",
+      "rationale": "Seed include relevance case"
+    },
+    {
+      "case_id": "case-16",
+      "context": {
+        "desired_roles": [
+          "ML Engineer"
+        ],
+        "skills": [],
+        "preferred_locations": [
+          "Seoul"
+        ],
+        "max_experience_years": 2,
+        "explicit_deal_breakers": []
+      },
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/16",
+        "source_posting_id": "16",
+        "title": "ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Rust"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "hold",
+      "expected_movement": "same",
+      "rationale": "Seed hold relevance case"
+    },
+    {
+      "case_id": "case-17",
+      "context": {
+        "desired_roles": [
+          "ML Engineer"
+        ],
+        "skills": [
+          "Python"
+        ],
+        "preferred_locations": [
+          "Seoul"
+        ],
+        "max_experience_years": 2,
+        "explicit_deal_breakers": [
+          "unpaid internship"
+        ]
+      },
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/17",
+        "source_posting_id": "17",
+        "title": "Unpaid Internship ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Python"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "exclude",
+      "expected_movement": "down",
+      "rationale": "Seed exclude relevance case"
+    },
+    {
+      "case_id": "case-18",
+      "context": "sample_config",
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/18",
+        "source_posting_id": "18",
+        "title": "ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Python",
+          "machine learning"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "include",
+      "expected_movement": "up",
+      "rationale": "Seed include relevance case"
+    },
+    {
+      "case_id": "case-19",
+      "context": {
+        "desired_roles": [
+          "ML Engineer"
+        ],
+        "skills": [],
+        "preferred_locations": [
+          "Seoul"
+        ],
+        "max_experience_years": 2,
+        "explicit_deal_breakers": []
+      },
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/19",
+        "source_posting_id": "19",
+        "title": "ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Rust"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "hold",
+      "expected_movement": "same",
+      "rationale": "Seed hold relevance case"
+    },
+    {
+      "case_id": "case-20",
+      "context": {
+        "desired_roles": [
+          "ML Engineer"
+        ],
+        "skills": [
+          "Python"
+        ],
+        "preferred_locations": [
+          "Seoul"
+        ],
+        "max_experience_years": 2,
+        "explicit_deal_breakers": [
+          "unpaid internship"
+        ]
+      },
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/20",
+        "source_posting_id": "20",
+        "title": "Unpaid Internship ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Python"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "exclude",
+      "expected_movement": "down",
+      "rationale": "Seed exclude relevance case"
+    },
+    {
+      "case_id": "case-21",
+      "context": "sample_config",
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/21",
+        "source_posting_id": "21",
+        "title": "ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Python",
+          "machine learning"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "include",
+      "expected_movement": "up",
+      "rationale": "Seed include relevance case"
+    },
+    {
+      "case_id": "case-22",
+      "context": {
+        "desired_roles": [
+          "ML Engineer"
+        ],
+        "skills": [],
+        "preferred_locations": [
+          "Seoul"
+        ],
+        "max_experience_years": 2,
+        "explicit_deal_breakers": []
+      },
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/22",
+        "source_posting_id": "22",
+        "title": "ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Rust"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "hold",
+      "expected_movement": "same",
+      "rationale": "Seed hold relevance case"
+    },
+    {
+      "case_id": "case-23",
+      "context": {
+        "desired_roles": [
+          "ML Engineer"
+        ],
+        "skills": [
+          "Python"
+        ],
+        "preferred_locations": [
+          "Seoul"
+        ],
+        "max_experience_years": 2,
+        "explicit_deal_breakers": [
+          "unpaid internship"
+        ]
+      },
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/23",
+        "source_posting_id": "23",
+        "title": "Unpaid Internship ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Python"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "exclude",
+      "expected_movement": "down",
+      "rationale": "Seed exclude relevance case"
+    },
+    {
+      "case_id": "case-24",
+      "context": "sample_config",
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/24",
+        "source_posting_id": "24",
+        "title": "ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Python",
+          "machine learning"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "include",
+      "expected_movement": "up",
+      "rationale": "Seed include relevance case"
+    },
+    {
+      "case_id": "case-25",
+      "context": {
+        "desired_roles": [
+          "ML Engineer"
+        ],
+        "skills": [],
+        "preferred_locations": [
+          "Seoul"
+        ],
+        "max_experience_years": 2,
+        "explicit_deal_breakers": []
+      },
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/25",
+        "source_posting_id": "25",
+        "title": "ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Rust"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "hold",
+      "expected_movement": "same",
+      "rationale": "Seed hold relevance case"
+    },
+    {
+      "case_id": "case-26",
+      "context": {
+        "desired_roles": [
+          "ML Engineer"
+        ],
+        "skills": [
+          "Python"
+        ],
+        "preferred_locations": [
+          "Seoul"
+        ],
+        "max_experience_years": 2,
+        "explicit_deal_breakers": [
+          "unpaid internship"
+        ]
+      },
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/26",
+        "source_posting_id": "26",
+        "title": "Unpaid Internship ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Python"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "exclude",
+      "expected_movement": "down",
+      "rationale": "Seed exclude relevance case"
+    },
+    {
+      "case_id": "case-27",
+      "context": "sample_config",
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/27",
+        "source_posting_id": "27",
+        "title": "ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Python",
+          "machine learning"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "include",
+      "expected_movement": "up",
+      "rationale": "Seed include relevance case"
+    },
+    {
+      "case_id": "case-28",
+      "context": {
+        "desired_roles": [
+          "ML Engineer"
+        ],
+        "skills": [],
+        "preferred_locations": [
+          "Seoul"
+        ],
+        "max_experience_years": 2,
+        "explicit_deal_breakers": []
+      },
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/28",
+        "source_posting_id": "28",
+        "title": "ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Rust"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "hold",
+      "expected_movement": "same",
+      "rationale": "Seed hold relevance case"
+    },
+    {
+      "case_id": "case-29",
+      "context": {
+        "desired_roles": [
+          "ML Engineer"
+        ],
+        "skills": [
+          "Python"
+        ],
+        "preferred_locations": [
+          "Seoul"
+        ],
+        "max_experience_years": 2,
+        "explicit_deal_breakers": [
+          "unpaid internship"
+        ]
+      },
+      "snapshot": {
+        "source_id": "fixture",
+        "source_url": "https://jobs.example.test/29",
+        "source_posting_id": "29",
+        "title": "Unpaid Internship ML Engineer",
+        "company": "Example",
+        "location": "Seoul",
+        "required_qualifications": [
+          "Python"
+        ],
+        "preferred_qualifications": [
+          "LLM"
+        ],
+        "responsibilities": [
+          "Build Python data products"
+        ],
+        "company_info": [
+          "AI team"
+        ]
+      },
+      "expected_verdict": "exclude",
+      "expected_movement": "down",
+      "rationale": "Seed exclude relevance case"
+    }
+  ]
+}

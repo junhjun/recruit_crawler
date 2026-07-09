@@ -120,11 +120,9 @@
 
 ## Company careers
 
-- Adapter: `CompanyCareersAdapter`
-- Lane/status: `deferred / null`
-- 검색/상세 경로 후보:
-  - 회사별 allowlist domain의 public careers/job/recruit/position URL
-  - robots/access review와 fixture/parser test가 있는 domain만 개별 enable합니다.
-- 기본 필터:
-  - include: `job`, `career`, `recruit`, `position`
-  - exclude: `login`, `signup`, `privacy`
+- Adapter: no near-term target adapter
+- Lane/status: `excluded / null`
+- 판단:
+  - Company careers 계열(`company_careers`, NAVER/Kakao/LINE/Coupang careers)은 Codex 예약됨 daily report service가 안정화될 때까지 LinkedIn과 같은 후순위/비대상 source로 둡니다.
+  - 회사별 source-specific parser 확장은 scheduled runner, persistence, feedback, customization이 안정화된 뒤 별도 계획으로 재검토합니다.
+  - manual/user-operated/OCR/API/partner path는 target enable 근거가 아닙니다.

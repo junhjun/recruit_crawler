@@ -53,6 +53,17 @@ def load_config(path: Path, *, allow_real_sources: bool = False) -> AppConfig:
         company=int(weights_raw.get("company", 10)),
         location=int(weights_raw.get("location", 10)),
     )
+    weight_values = (
+        weights.required,
+        weights.preferred,
+        weights.responsibilities,
+        weights.company,
+        weights.location,
+    )
+    if any(value < 0 for value in weight_values):
+        raise ConfigError("scoring_weights values must be non-negative")
+    if sum(weight_values) <= 0:
+        raise ConfigError("scoring_weights must include at least one positive value")
 
     profile_raw = _require_mapping(data.get("profile", {}), "profile")
     profile = Profile(

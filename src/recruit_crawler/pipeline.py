@@ -160,6 +160,10 @@ def run_live_run(config: AppConfig, run_date: date) -> Tuple[RunSummary, str, li
     return _run_pipeline(config, run_date, report_slug="recruiting-live-run")
 
 
+def run_scheduled_run(config: AppConfig, run_date: date) -> Tuple[RunSummary, str, list[FitAssessment]]:
+    return _run_pipeline(config, run_date, report_slug="recruiting-scheduled-run")
+
+
 def build_live_run_quality_gate(summary: RunSummary, config: AppConfig) -> dict[str, Any]:
     enabled_source_ids = {source.source_id for source in config.sources if source.enabled}
     findings = []
