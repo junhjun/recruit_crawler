@@ -4,7 +4,7 @@ from datetime import datetime
 from dataclasses import replace
 import json
 from pathlib import Path
-from typing import Any, Iterable, List, Mapping, Tuple
+from typing import Iterable, List, Mapping, Tuple, TypedDict, Union
 
 from .schemas import AppConfig, FeedbackEvent, JDSnapshot, RelevanceCase, UserContext
 from .scorer import score_snapshot
@@ -13,6 +13,21 @@ from .user_context import profile_from_context
 
 class RelevanceCaseLoadError(ValueError):
     pass
+
+
+JsonScalar = Union[str, int, float, bool, None]
+JsonValue = Union[JsonScalar, list["JsonValue"], dict[str, "JsonValue"]]
+JsonObject = Mapping[str, JsonValue]
+
+
+class FeedbackRecordInput(TypedDict, total=False):
+    posting_key: str
+    recommendation_id: str
+    posting_id: str
+    verdict: str
+    reason: str
+    movement: str
+    created_at: str
 
 
 def load_relevance_cases(path: Path, base_config: AppConfig) -> List[RelevanceCase]:
@@ -25,57 +40,73 @@ def load_relevance_cases(path: Path, base_config: AppConfig) -> List[RelevanceCa
     return [_case_from_mapping(item, base_config) for item in payload["cases"]]
 
 
-def _case_from_mapping(item: Any, base_config: AppConfig) -> RelevanceCase:
-    if not isinstance(item, dict):
-        raise RelevanceCaseLoadError("each relevance case must be an object")
-    context = _context_from_mapping(item.get("context"), base_config)
-    snapshot = _snapshot_from_mapping(item.get("snapshot"))
+def _json_mapping(value: JsonValue, message: str) -> JsonObject:
+    if not isinstance(value, dict):
+        raise RelevanceCaseLoadError(message)
+    return value
+
+
+def _json_list(value: JsonValue) -> list[JsonValue]:
+    return value if isinstance(value, list) else []
+
+
+def _json_object_items(value: JsonValue) -> JsonObject:
+    return value if isinstance(value, dict) else {}
+
+
+def _optional_int(value: JsonValue) -> int | None:
+    return int(value) if value is not None else None
+
+
+def _case_from_mapping(item: JsonValue, base_config: AppConfig) -> RelevanceCase:
+    record = _json_mapping(item, "each relevance case must be an object")
+    context = _context_from_mapping(record.get("context"), base_config)
+    snapshot = _snapshot_from_mapping(record.get("snapshot"))
     return RelevanceCase(
-        case_id=str(item["case_id"]),
+        case_id=str(record["case_id"]),
         user_context=context,
         snapshot=snapshot,
-        expected_verdict=str(item["expected_verdict"]),
-        expected_movement=str(item.get("expected_movement", "same")),
-        rationale=str(item.get("rationale", "")),
+        expected_verdict=str(record["expected_verdict"]),
+        expected_movement=str(record.get("expected_movement", "same")),
+        rationale=str(record.get("rationale", "")),
     )
 
 
-def _context_from_mapping(value: Any, base_config: AppConfig) -> UserContext:
+def _context_from_mapping(value: JsonValue, base_config: AppConfig) -> UserContext:
     if value == "sample_config":
         return base_config.user_context
-    if not isinstance(value, dict):
-        raise RelevanceCaseLoadError("case context must be an object or sample_config")
+    record = _json_mapping(value, "case context must be an object or sample_config")
+    provenance = _json_object_items(record.get("provenance"))
     return UserContext(
-        desired_roles=[str(item) for item in value.get("desired_roles", [])],
-        skills=[str(item) for item in value.get("skills", [])],
-        preferred_locations=[str(item) for item in value.get("preferred_locations", [])],
-        max_experience_years=int(value.get("max_experience_years", 0)),
-        explicit_deal_breakers=[str(item) for item in value.get("explicit_deal_breakers", [])],
-        missing_context=[str(item) for item in value.get("missing_context", [])],
-        provenance={str(key): str(inner_value) for key, inner_value in value.get("provenance", {}).items()},
-        private_canaries=[str(item) for item in value.get("private_canaries", [])],
+        desired_roles=[str(item) for item in _json_list(record.get("desired_roles"))],
+        skills=[str(item) for item in _json_list(record.get("skills"))],
+        preferred_locations=[str(item) for item in _json_list(record.get("preferred_locations"))],
+        max_experience_years=int(record.get("max_experience_years", 0)),
+        explicit_deal_breakers=[str(item) for item in _json_list(record.get("explicit_deal_breakers"))],
+        missing_context=[str(item) for item in _json_list(record.get("missing_context"))],
+        provenance={str(key): str(inner_value) for key, inner_value in provenance.items()},
+        private_canaries=[str(item) for item in _json_list(record.get("private_canaries"))],
     )
 
 
-def _snapshot_from_mapping(value: Any) -> JDSnapshot:
-    if not isinstance(value, Mapping):
-        raise RelevanceCaseLoadError("case snapshot must be an object")
+def _snapshot_from_mapping(value: JsonValue) -> JDSnapshot:
+    record = _json_mapping(value, "case snapshot must be an object")
     return JDSnapshot(
-        source_id=str(value.get("source_id", "fixture")),
-        source_url=str(value["source_url"]),
-        source_posting_id=str(value["source_posting_id"]) if value.get("source_posting_id") is not None else None,
-        title=str(value["title"]),
-        company=str(value.get("company", "")),
-        location=str(value.get("location", "")),
-        deadline_raw=value.get("deadline_raw"),
+        source_id=str(record.get("source_id", "fixture")),
+        source_url=str(record["source_url"]),
+        source_posting_id=str(record["source_posting_id"]) if record.get("source_posting_id") is not None else None,
+        title=str(record["title"]),
+        company=str(record.get("company", "")),
+        location=str(record.get("location", "")),
+        deadline_raw=str(record["deadline_raw"]) if record.get("deadline_raw") is not None else None,
         deadline=None,
-        deadline_uncertain=bool(value.get("deadline_uncertain", False)),
-        required_qualifications=[str(item) for item in value.get("required_qualifications", [])],
-        preferred_qualifications=[str(item) for item in value.get("preferred_qualifications", [])],
-        responsibilities=[str(item) for item in value.get("responsibilities", [])],
-        company_info=[str(item) for item in value.get("company_info", [])],
-        minimum_experience_years=value.get("minimum_experience_years"),
-        manual_review_flags=[str(item) for item in value.get("manual_review_flags", [])],
+        deadline_uncertain=bool(record.get("deadline_uncertain", False)),
+        required_qualifications=[str(item) for item in _json_list(record.get("required_qualifications"))],
+        preferred_qualifications=[str(item) for item in _json_list(record.get("preferred_qualifications"))],
+        responsibilities=[str(item) for item in _json_list(record.get("responsibilities"))],
+        company_info=[str(item) for item in _json_list(record.get("company_info"))],
+        minimum_experience_years=_optional_int(record.get("minimum_experience_years")),
+        manual_review_flags=[str(item) for item in _json_list(record.get("manual_review_flags"))],
     )
 
 
@@ -121,7 +152,7 @@ def evaluate_relevance_cases(
     return failures
 
 
-def feedback_events_from_records(records: Iterable[Mapping[str, Any]]) -> List[FeedbackEvent]:
+def feedback_events_from_records(records: Iterable[FeedbackRecordInput]) -> List[FeedbackEvent]:
     events: List[FeedbackEvent] = []
     for record in records:
         created_at = record.get("created_at")
