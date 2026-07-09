@@ -9,6 +9,7 @@ from .cli_handlers import (
     handle_browser_evidence,
     handle_capture_import,
     handle_capture_quality_gate,
+    handle_context_doctor,
     handle_dry_run,
     handle_feedback_add,
     handle_feedback_export,
@@ -33,6 +34,7 @@ _COMMAND_HANDLERS: dict[str, CommandHandler] = {
     "capture-import": handle_capture_import,
     "capture-quality-gate": handle_capture_quality_gate,
     "browser-evidence": handle_browser_evidence,
+    "context-doctor": handle_context_doctor,
     "status-report": handle_status_report,
 }
 
@@ -94,6 +96,10 @@ def build_parser() -> argparse.ArgumentParser:
     browser_evidence.add_argument("--target-url")
     browser_evidence.add_argument("--fixture-html", type=Path)
     browser_evidence.add_argument("--output", type=Path, required=True)
+    context_doctor = subparsers.add_parser("context-doctor", help="interview for missing user context and write preferences Markdown")
+    context_doctor.add_argument("--config", type=Path, default=Path("config/live_sources.sample.json"))
+    context_doctor.add_argument("--context-doc", type=Path, action="append", help="existing context document; repeat for resume, portfolio, and preferences")
+    context_doctor.add_argument("--output", type=Path, required=True, help="path to write persistent preferences Markdown")
     status_report = subparsers.add_parser("status-report", help="write or check the current feature status ledger")
     status_report.add_argument("--config", type=Path, default=Path("config/live_sources.sample.json"))
     status_report.add_argument("--features", type=Path, default=Path("docs/status/features.json"))

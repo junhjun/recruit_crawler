@@ -68,6 +68,18 @@ PYTHONPATH=src python3 -m recruit_crawler.cli scheduled-run \
 
 `scheduled-run` never prompts for missing context. Missing role, skill, location, or experience fields are written as `needs_context` quality-gate findings so an external scheduler can fail visibly instead of hanging. Its quality gate also includes a stable `run_identity.run_id` derived from command mode, run date, source config hash, and profile/filter hash so same-date reruns reuse deterministic report and gate artifacts.
 
+If a scheduled run reports `context_status: needs_context`, run `context-doctor` once from the Codex app or terminal to fill only the missing fields and persist them as an editable Markdown preferences document:
+
+```sh
+PYTHONPATH=src python3 -m recruit_crawler.cli context-doctor \
+  --config config/live_sources.sample.json \
+  --context-doc personal_info/resume.md \
+  --context-doc personal_info/portfolio.md \
+  --output personal_info/preferences.md
+```
+
+Then include `personal_info/preferences.md` in future scheduled runs with another `--context-doc`. The generated file uses simple `Roles:`, `Skills:`, `Locations:`, `Experience:`, and `Deal breakers:` lines so it can be edited later without touching source code.
+
 When `--db-path` is supplied, `scheduled-run` stores the run, source metrics, recommendations, and quality gate in local SQLite. The gate and stdout expose only the DB filename plus a path hash, not the raw local path.
 
 ```sh
@@ -87,6 +99,7 @@ Use this repository as a local-first scheduled report service. Install dependenc
 - A writable report directory such as `reports/scheduled/`.
 - A writable quality-gate path such as `artifacts/scheduled/latest_quality_gate.json`.
 - A local SQLite DB path such as `personal_info/recruit.sqlite3` for scheduled history and feedback.
+- Optional persistent preferences at `personal_info/preferences.md`, generated with `context-doctor` when resume/portfolio documents do not contain explicit roles, locations, or experience bounds.
 
 Do not put raw resumes, cookies, browser profiles, API tokens, private canaries, or session exports in committed files. Sample configs are templates only and do not contain private personal data.
 
@@ -150,7 +163,7 @@ PYTHONPATH=src python3 -m unittest discover -s tests
 
 ### Troubleshooting and update flow
 
-- `context_status: needs_context`: add missing role, skill, location, or max experience data to the context docs or profile config; scheduled mode will not prompt.
+- `context_status: needs_context`: run `context-doctor` to generate or update `personal_info/preferences.md`, then pass that file to `scheduled-run`; scheduled mode will not prompt.
 - `source_policy` failure: disable non-target, manual, API, OCR, authenticated, partner-payload, or user-operated sources for scheduled mode.
 - Zero-candidate/parser drift failure: inspect the source row in the quality gate and keep the report on hold until the adapter fixture/parser is updated.
 - Privacy failure exit code `3`: remove private canary/session/token text from context or feedback reason inputs.

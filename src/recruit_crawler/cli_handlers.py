@@ -8,6 +8,7 @@ from typing import Optional
 from .browser_evidence import build_browser_evidence, write_browser_evidence
 from .capture_import import CaptureImportError, build_capture_quality_gate, import_capture_files, select_capture_files
 from .config import ConfigError, apply_context_documents, apply_supplemental_answers, load_config
+from .context_doctor import ContextDoctorRequest, run_context_doctor
 from .pipeline import build_live_run_quality_gate, run_capture_import, run_dry_run, run_live_run
 from .scheduled import ScheduledRunRequest, run_scheduled_job
 from .source_registry import source_status_rows
@@ -50,6 +51,30 @@ def _load_config_with_context(args: argparse.Namespace, *, allow_real_sources: b
         if interview:
             config = _apply_supplemental_interview(config)
     return config
+
+
+def _context_doctor_answers(args: argparse.Namespace) -> dict[str, str]:
+    config = load_config(args.config, allow_real_sources=True)
+    context_docs = list(args.context_doc or [])
+    if args.output.exists() and args.output not in context_docs:
+        context_docs.append(args.output)
+    if context_docs:
+        config = apply_context_documents(config, context_docs)
+    from .user_context import missing_context_fields, supplemental_questions
+
+    missing_fields = missing_context_fields(config.user_context)
+    if not missing_fields:
+        return {}
+    print("Context onboarding interview:")
+    answers = {}
+    for field, question in zip(missing_fields, supplemental_questions(config.user_context)):
+        try:
+            answer = input(f"- {question}\n> ")
+        except EOFError as exc:
+            raise ConfigError(f"missing context requires supplemental answer for {field}") from exc
+        if answer.strip():
+            answers[field] = answer.strip()
+    return answers
 
 
 def handle_dry_run(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
@@ -239,6 +264,28 @@ def handle_browser_evidence(args: argparse.Namespace, parser: argparse.ArgumentP
     print(f"Browser evidence written: {args.output}")
     print(f"Browser evidence status: {'passed' if transcript['exit_code'] == 0 else 'failed'}")
     return int(transcript["exit_code"])
+
+
+def handle_context_doctor(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
+    try:
+        config = load_config(args.config, allow_real_sources=True)
+        answers = _context_doctor_answers(args)
+        result = run_context_doctor(
+            ContextDoctorRequest(
+                config=config,
+                context_docs=args.context_doc or [],
+                output=args.output,
+            ),
+            answers,
+        )
+    except UserContextImportError as exc:
+        parser.exit(3, f"{parser.prog}: privacy error: {exc}\n")
+    except (ConfigError, ValueError, FileNotFoundError) as exc:
+        parser.error(str(exc))
+        return 2
+    for line in result.stdout_lines:
+        print(line)
+    return result.exit_code
 
 
 def handle_status_report(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:

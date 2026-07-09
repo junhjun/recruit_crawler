@@ -8,7 +8,7 @@ Codex 예약됨에 등록하도록 설계된 local-first recruiting report servi
 
 ## 기능 구현 현황
 
-총 20개 기능 — deferred: 1, done: 15, excluded: 2, partial: 2
+총 21개 기능 — deferred: 1, done: 16, excluded: 2, partial: 2
 
 | 기능 | 상태 | 범주 | 사용자 가치 | 진입점 | 검증 |
 | --- | --- | --- | --- | --- | --- |
@@ -23,6 +23,7 @@ Codex 예약됨에 등록하도록 설계된 local-first recruiting report servi
 | Korean Markdown report | `done` | reporting | 랭킹 결과를 한국어 Markdown 리포트로 저장하고 raw/private marker를 노출하지 않는다. | `--print-report`<br />`reports/*.md` | `test_report_surface_text_is_korean`<br />`test_report_excludes_raw_jd_and_private_profile_canaries` |
 | Context document import | `done` | user_context | 이력서/포트폴리오/선호조건 문서를 읽어 개인화 scoring context를 만든다. | `--context-doc` | `test_plaintext_context_imports_user_context`<br />`test_dry_run_context_doc_cli_merges_multiple_personal_inputs` |
 | Supplemental context interview | `done` | user_context | context 문서에 필수 필드가 부족하면 CLI 질문으로 누락값을 보강한다. | `--context-doc with missing fields` | `test_context_doc_cli_interviews_for_missing_context`<br />`test_missing_context_generates_questions_and_answers_merge` |
+| Context doctor preferences file | `done` | user_context | scheduled-run이 needs_context로 막히면 부족한 필드만 질문해 지속 사용 가능한 personal_info/preferences.md를 만든다. | `recruit-crawler context-doctor` | `test_context_doctor_writes_parseable_preferences_for_missing_context`<br />`test_scheduled_run_with_context_doctor_output_has_complete_context` |
 | Privacy and persisted-field boundaries | `done` | privacy | private canary, raw JD marker, auth/session/private target 정보를 저장하거나 리포트하지 않도록 차단한다. | `config allowed_persisted_fields`<br />`browser-evidence`<br />`capture-import` | `test_private_canary_document_fails_closed`<br />`test_capture_import_rejects_sensitive_posting_fields`<br />+1 |
 | Live-run quality gate | `done` | quality_gate | enabled source가 후보를 못 모으거나 오류가 나면 JSON gate로 실패를 드러낸다. | `live-run --quality-gate-output` | `test_live_run_quality_gate_fails_enabled_source_with_zero_candidates`<br />`test_live_run_cli_writes_quality_gate_json` |
 | Chrome extension capture/import fallback | `partial` | browser_capture | 수동 브라우저 캡처 JSON을 import해 리포트와 quality gate를 만들 수 있다. | `browser extension popup`<br />`recruit-crawler capture-import`<br />`recruit-crawler capture-quality-gate` | `test_capture_import_maps_mixed_sources_and_generates_report`<br />`test_capture_quality_gate_reports_privacy_and_import_categories` |

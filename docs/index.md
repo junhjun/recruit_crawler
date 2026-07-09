@@ -66,6 +66,15 @@ PYTHONPATH=src python3 -m recruit_crawler.cli scheduled-run \
   --quality-gate-output artifacts/scheduled/latest_quality_gate.json
 ```
 
+`needs_context`가 나오면 `context-doctor`로 부족한 필드만 질문받고 지속 사용 가능한 `personal_info/preferences.md`를 생성합니다.
+
+```sh
+PYTHONPATH=src python3 -m recruit_crawler.cli context-doctor \
+  --config config/live_sources.sample.json \
+  --context-doc path/to/resume.md \
+  --output personal_info/preferences.md
+```
+
 현재 대표 리포트:
 
 - `reports/recruiting-live-run-2026-07-01.md`

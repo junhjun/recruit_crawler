@@ -203,6 +203,89 @@ class UserContextCliTests(unittest.TestCase):
 
         self.assertEqual(cm.exception.code, 2)
 
+    def test_context_doctor_writes_parseable_preferences_for_missing_context(self) -> None:
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(output), patch(
+            "builtins.input",
+            side_effect=["AI Engineer, Data Engineer", "Seoul, Remote"],
+        ):
+            tmp_path = Path(tmp)
+            config_path = self._write_two_posting_config(tmp_path)
+            resume_path = tmp_path / "resume.md"
+            preferences_path = tmp_path / "preferences.md"
+            resume_path.write_text(
+                "Skills: Python, SQL\nExperience: 2 years\n",
+                encoding="utf-8",
+            )
+
+            exit_code = cli_main(
+                [
+                    "context-doctor",
+                    "--config",
+                    str(config_path),
+                    "--context-doc",
+                    str(resume_path),
+                    "--output",
+                    str(preferences_path),
+                ]
+            )
+            preferences = preferences_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("Context preferences written:", output.getvalue())
+        self.assertIn("Roles: AI Engineer, Data Engineer", preferences)
+        self.assertIn("Locations: Seoul, Remote", preferences)
+        self.assertIn("Skills: Python, SQL", preferences)
+        self.assertIn("Experience: 2 years", preferences)
+
+    def test_scheduled_run_with_context_doctor_output_has_complete_context(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, patch(
+            "builtins.input",
+            side_effect=["AI Engineer", "Seoul"],
+        ):
+            tmp_path = Path(tmp)
+            config_path = self._write_two_posting_config(tmp_path)
+            resume_path = tmp_path / "resume.md"
+            preferences_path = tmp_path / "preferences.md"
+            gate_path = tmp_path / "gate.json"
+            resume_path.write_text(
+                "Skills: Python, SQL\nExperience: 2 years\n",
+                encoding="utf-8",
+            )
+
+            doctor_exit = cli_main(
+                [
+                    "context-doctor",
+                    "--config",
+                    str(config_path),
+                    "--context-doc",
+                    str(resume_path),
+                    "--output",
+                    str(preferences_path),
+                ]
+            )
+            scheduled_exit = cli_main(
+                [
+                    "scheduled-run",
+                    "--config",
+                    str(config_path),
+                    "--context-doc",
+                    str(resume_path),
+                    "--context-doc",
+                    str(preferences_path),
+                    "--run-date",
+                    "2026-06-30",
+                    "--quality-gate-output",
+                    str(gate_path),
+                ]
+            )
+            gate = json.loads(gate_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(doctor_exit, 0)
+        self.assertEqual(scheduled_exit, 0)
+        self.assertEqual(gate["context_status"], "complete")
+        self.assertEqual(gate["missing_context"], [])
+
 
 class SupplementalInterviewTests(unittest.TestCase):
     def test_missing_context_generates_questions_and_answers_merge(self) -> None:
