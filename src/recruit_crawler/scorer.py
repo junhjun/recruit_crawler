@@ -45,6 +45,20 @@ def _location_matches(location: str, preferred_locations: Sequence[str]) -> bool
     return False
 
 
+def _role_matches(title: str, desired_roles: Sequence[str]) -> bool:
+    normalized_title = title.lower()
+    for role in desired_roles:
+        normalized_role = role.lower().strip()
+        if not normalized_role:
+            continue
+        if normalized_role in normalized_title:
+            return True
+        tokens = [token for token in normalized_role.replace("/", " ").split() if token]
+        if tokens and all(token in normalized_title for token in tokens):
+            return True
+    return False
+
+
 def _ratio(matches: Sequence[str], total: int) -> float:
     if total == 0:
         return 0.5
@@ -94,6 +108,7 @@ def score_snapshot(snapshot: JDSnapshot, config: AppConfig) -> FitAssessment:
     responsibility_matches = _match_terms(snapshot.responsibilities, profile)
     company_matches = _match_terms(snapshot.company_info, profile)
     location_match = _location_matches(snapshot.location, profile.preferred_locations)
+    role_match = _role_matches(snapshot.title, profile.desired_roles)
     missing_context_signals = missing_context_fields(context)
     deal_breakers = deal_breaker_hits(snapshot, context)
 
@@ -104,6 +119,8 @@ def score_snapshot(snapshot: JDSnapshot, config: AppConfig) -> FitAssessment:
         + weights.responsibilities * _ratio(responsibility_matches, len(snapshot.responsibilities))
         + weights.company * _ratio(company_matches, len(snapshot.company_info))
         + (weights.location if location_match else 0)
+        + (5 if role_match else 0)
+        - (10 if profile.desired_roles and not role_match else 0)
     )
     score = max(0, min(100, int(score)))
 
@@ -117,6 +134,8 @@ def score_snapshot(snapshot: JDSnapshot, config: AppConfig) -> FitAssessment:
         matched_evidence.extend(f"{label}: {match}" for match in matches[:3])
     if location_match:
         matched_evidence.append(f"근무지: {snapshot.location}")
+    if role_match:
+        matched_evidence.append(f"선호 직무: {snapshot.title}")
     if not matched_evidence:
         matched_evidence.append("구조화된 항목에서 강한 프로필 매칭 신호가 없습니다")
 
@@ -133,6 +152,8 @@ def score_snapshot(snapshot: JDSnapshot, config: AppConfig) -> FitAssessment:
         risks.append("필수 요건 공백이 서류 평가에 영향을 줄 수 있습니다")
     if snapshot.location and not location_match:
         risks.append(f"선호 근무지가 아닙니다: {snapshot.location}")
+    if profile.desired_roles and not role_match:
+        risks.append("선호 직무명과 직접 일치하지 않습니다: " + ", ".join(profile.desired_roles[:3]))
 
     if missing_context_signals:
         risks.append("사용자 맥락이 부족해 보류 판단이 필요합니다: " + ", ".join(missing_context_signals))
