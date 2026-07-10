@@ -1,6 +1,6 @@
 # Recruit Crawler 문서 인덱스
 
-상태일: 2026-07-07
+상태일: 2026-07-10
 
 이 디렉터리는 사람이 읽는 운영/설계 문서를 보관합니다. 현재 기능 구현 현황의 단일 원장은 `status.md`이며, source 기계 판정 기준은 항상 `config/live_sources.sample.json`과 `source-status --json` 출력입니다.
 
@@ -20,6 +20,8 @@
    - 사이트별 검색 URL, discovery 방식, parser marker, fallback parser 상세.
 7. `source_access_reviews.md`
    - source별 access/privacy/ToS 판단과 target enable/block 근거.
+8. `model_context_extraction_report.md`
+   - Codex thread 기반 structured context extraction의 현재 경계, privacy guard, persistent cache와 app-host integration 후속 과제.
 
 ## 보조 문서
 
@@ -53,7 +55,7 @@ PYTHONPATH=src python3 -m recruit_crawler.cli live-run \
 
 `config.profile`은 fixture/default fallback입니다. 개인화된 실행은 `.txt`, `.md`, `.pdf`, `.docx` context 문서를 `--context-doc`으로 명시합니다. 이 옵션은 여러 번 반복할 수 있으며 resume, portfolio, 선호조건 메모를 합쳐 UserContext를 보강합니다.
 
-Context 문서에서 필수 필드가 부족하면 CLI는 scoring 전에 보충 interview를 실행해 누락된 직무/기술/근무지/경력 정보를 입력받습니다.
+`dry-run`은 interactive terminal 사용을 위해 누락 context를 보충 질문할 수 있습니다. `live-run`은 기본적으로 non-interactive이며 `--interview-missing-context`를 명시했을 때만 질문합니다. `scheduled-run`은 질문하지 않습니다.
 
 Codex `예약됨` 대상 비대화형 실행은 `scheduled-run`을 사용합니다. 이 명령은 보충 interview를 실행하지 않고, 누락된 context를 quality gate의 `needs_context` 신호로 남깁니다.
 

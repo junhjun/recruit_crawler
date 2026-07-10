@@ -1,6 +1,6 @@
 # Recruit Crawler Status
 
-상태일: 2026-07-02
+상태일: 2026-07-10
 
 ## 제품 한 줄 정의
 
@@ -8,24 +8,24 @@ Codex 예약됨에 등록하도록 설계된 local-first recruiting report servi
 
 ## 기능 구현 현황
 
-총 21개 기능 — deferred: 1, done: 16, excluded: 2, partial: 2
+총 21개 기능 — deferred: 1, done: 15, excluded: 2, partial: 3
 
 | 기능 | 상태 | 범주 | 사용자 가치 | 진입점 | 검증 |
 | --- | --- | --- | --- | --- | --- |
 | Fixture dry-run | `done` | pipeline | 네트워크 없이 샘플 채용공고 리포트를 생성한다. | `recruit-crawler dry-run` | `test_fixture_e2e_generates_report_without_expired_postings` |
 | Live-run pipeline | `done` | pipeline | 검토된 실제 source adapter에서 후보를 수집하고 랭킹 리포트를 만든다. | `recruit-crawler live-run` | `test_live_run_records_source_level_candidate_metrics` |
 | Source registry and status CLI | `done` | source | source별 enabled/deferred/excluded, lane, evidence, blocker를 기계적으로 확인한다. | `recruit-crawler source-status` | `test_source_registry_loads_expected_statuses_and_lanes`<br />`test_source_status_json_outputs_registry_without_network_or_adapter_construction` |
-| Core platform source adapters | `done` | source | JobKorea, Saramin, Wanted, Jumpit, Rallit, RocketPunch에서 no-human target 후보를 수집한다. | `recruit-crawler live-run` | `test_known_platforms_use_platform_specific_adapters`<br />`test_jobkorea_adapter_discovers_ai_jobs_from_api_html`<br />+5 |
+| Core platform source adapters | `done` | source | JobKorea, Saramin, Wanted, Jumpit, Rallit, RocketPunch에서 no-human target 후보를 수집한다. | `recruit-crawler live-run` | `test_known_platforms_use_platform_specific_adapters`<br />`test_jobkorea_adapter_discovers_ai_jobs_from_api_html`<br />+8 |
 | Company careers collection | `excluded` | source | 회사별 채용 페이지에서 공고를 수집한다. | 없음 | 없음 |
 | LinkedIn automatic collection | `excluded` | source | LinkedIn 공고를 자동 수집한다. | 없음 | `test_linkedin_adapter_requires_explicit_approved_access` |
 | JD parsing | `done` | scoring | 공고 후보를 title/company/location/deadline/requirements/responsibilities 등 구조화된 snapshot으로 변환한다. | `internal parse_candidates` | `test_unknown_deadline_is_uncertain_not_expired`<br />`test_each_selected_posting_has_actionable_report_fields` |
-| Scoring and ranking | `done` | scoring | 사용자 context와 JD를 비교해 apply/hold/low_priority/exclude 추천을 산출한다. | `internal rank_snapshots` | `test_recommendation_buckets_include_apply_hold_and_low_priority`<br />`test_live_run_allows_two_years_and_filters_above_profile_limit` |
+| Scoring and ranking | `done` | scoring | 사용자 context와 JD를 비교해 apply/hold/low_priority/exclude 추천을 산출한다. | `internal rank_snapshots` | `test_recommendation_buckets_include_apply_hold_and_low_priority`<br />`test_live_run_allows_two_years_and_filters_above_profile_limit`<br />+1 |
 | Korean Markdown report | `done` | reporting | 랭킹 결과를 한국어 Markdown 리포트로 저장하고 raw/private marker를 노출하지 않는다. | `--print-report`<br />`reports/*.md` | `test_report_surface_text_is_korean`<br />`test_report_excludes_raw_jd_and_private_profile_canaries` |
-| Context document import | `done` | user_context | 이력서/포트폴리오/선호조건 문서를 읽어 개인화 scoring context를 만든다. | `--context-doc` | `test_plaintext_context_imports_user_context`<br />`test_dry_run_context_doc_cli_merges_multiple_personal_inputs` |
-| Supplemental context interview | `done` | user_context | context 문서에 필수 필드가 부족하면 CLI 질문으로 누락값을 보강한다. | `--context-doc with missing fields` | `test_context_doc_cli_interviews_for_missing_context`<br />`test_missing_context_generates_questions_and_answers_merge` |
-| Context doctor preferences file | `done` | user_context | scheduled-run이 needs_context로 막히면 부족한 필드만 질문해 지속 사용 가능한 personal_info/preferences.md를 만든다. | `recruit-crawler context-doctor` | `test_context_doctor_writes_parseable_preferences_for_missing_context`<br />`test_scheduled_run_with_context_doctor_output_has_complete_context` |
+| Context document import | `partial` | user_context | 기본 CLI는 deterministic import를 유지하고, app host가 ContextExtractionRuntime을 주입하면 disposable Codex thread로 구조화한 뒤 실패 시 deterministic context로 안전하게 복구한다. | `--context-doc` | `test_plaintext_context_imports_user_context`<br />`test_dry_run_context_doc_cli_merges_multiple_personal_inputs`<br />+18 |
+| Supplemental context interview | `done` | user_context | interactive dry-run, 명시적으로 요청한 terminal live-run, 또는 context-doctor에서 필수 필드 부족분만 CLI 질문으로 보강한다. | `live-run --interview-missing-context`<br />`recruit-crawler context-doctor` | `test_context_doc_cli_interviews_for_missing_context`<br />`test_live_run_interview_flag_fills_missing_context`<br />+1 |
+| Context doctor preferences file | `done` | user_context | 역할·기술·근무지·경력·제외조건을 명시적으로 질문해 지속 사용 가능한 personal_info/preferences.md를 만든다. | `recruit-crawler context-doctor` | `test_context_doctor_writes_only_interview_preferences_and_preserves_korean_locations`<br />`test_scheduled_run_with_context_doctor_output_has_complete_context` |
 | Privacy and persisted-field boundaries | `done` | privacy | private canary, raw JD marker, auth/session/private target 정보를 저장하거나 리포트하지 않도록 차단한다. | `config allowed_persisted_fields`<br />`browser-evidence`<br />`capture-import` | `test_private_canary_document_fails_closed`<br />`test_capture_import_rejects_sensitive_posting_fields`<br />+1 |
-| Live-run quality gate | `done` | quality_gate | enabled source가 후보를 못 모으거나 오류가 나면 JSON gate로 실패를 드러낸다. | `live-run --quality-gate-output` | `test_live_run_quality_gate_fails_enabled_source_with_zero_candidates`<br />`test_live_run_cli_writes_quality_gate_json` |
+| Live-run quality gate | `done` | quality_gate | context 부족, enabled source zero-candidate, source 오류를 JSON gate로 실패/경고 표면화한다. | `live-run --quality-gate-output` | `test_live_run_missing_context_is_noninteractive_quality_failure`<br />`test_live_run_quality_gate_fails_enabled_source_with_zero_candidates`<br />+1 |
 | Chrome extension capture/import fallback | `partial` | browser_capture | 수동 브라우저 캡처 JSON을 import해 리포트와 quality gate를 만들 수 있다. | `browser extension popup`<br />`recruit-crawler capture-import`<br />`recruit-crawler capture-quality-gate` | `test_capture_import_maps_mixed_sources_and_generates_report`<br />`test_capture_quality_gate_reports_privacy_and_import_categories` |
 | Browser evidence transcript | `done` | quality_gate | 브라우저 DOM evidence를 허용 필드만 남긴 transcript로 생성해 source proof를 남긴다. | `recruit-crawler browser-evidence` | `test_browser_evidence_fixture_writes_allowed_fields_without_dom_leakage`<br />`test_browser_evidence_redacts_private_markers_case_insensitively` |
 | Feedback learning loop | `done` | scoring | 사용자 피드백으로 추천 품질을 개선한다. | `recruit-crawler feedback-add`<br />`recruit-crawler feedback-export` | `test_feedback_add_records_event_for_persisted_recommendation`<br />`test_feedback_add_rejects_private_reason_canary`<br />+2 |
@@ -57,6 +57,7 @@ Codex 예약됨에 등록하도록 설계된 local-first recruiting report servi
 | --- | --- | --- | --- |
 | Company careers collection | `excluded` | Near-term service goal prioritizes Codex scheduled usage over company-careers expansion; Company careers require separate source-specific future review | Park with LinkedIn-like non-target sources; revisit only after scheduled service, persistence, feedback, and customization are stable. |
 | LinkedIn automatic collection | `excluded` | V1 target에서 제외; auth/session/privacy risk; direct scraping/API/partner payload excluded | Do not include in V1 automatic collection. |
+| Context document import | `partial` | Codex app host composition must implement CodexThreadRunner and inject ContextExtractionRuntime; the repository CLI intentionally remains deterministic by default. | App host create/read/archive lifecycle, timeout, retention, and privacy-safe operational logging policy를 별도 integration layer로 확정합니다. |
 | Chrome extension capture/import fallback | `partial` | manual/user-operated capture is fallback evidence, not target completion evidence | Keep as historical/manual fallback and regression fixture path; do not count as target enablement. |
 | Persistent DB/history | `partial` | History query surface is minimal and does not yet expose recommendation-change analysis | Expand history queries after customization and packaging stabilize. |
 | Codex scheduled onboarding and packaging | `deferred` | Web UI/service mode is outside the current scheduled-run CLI product scope; Source-health maintenance, persistence/history, feedback ingestion, and customization gates must stabilize first | Defer web UI/service mode until the scheduled runner, persistence, feedback ingestion, customization, and source health gates are stable. |
@@ -67,19 +68,21 @@ Codex 예약됨에 등록하도록 설계된 local-first recruiting report servi
 
 - **Company careers collection**: Park with LinkedIn-like non-target sources; revisit only after scheduled service, persistence, feedback, and customization are stable.
 - **LinkedIn automatic collection**: Do not include in V1 automatic collection.
+- **Context document import**: App host create/read/archive lifecycle, timeout, retention, and privacy-safe operational logging policy를 별도 integration layer로 확정합니다.
 - **Chrome extension capture/import fallback**: Keep as historical/manual fallback and regression fixture path; do not count as target enablement.
 - **Persistent DB/history**: Expand history queries after customization and packaging stabilize.
 - **Codex scheduled onboarding and packaging**: Defer web UI/service mode until the scheduled runner, persistence, feedback ingestion, customization, and source health gates are stable.
 
 ### TODO.md 기준
 
-- Saramin/Wanted 검색/목록 discovery를 `detail_urls` 직접 지정에서 no-human public discovery로 확장
 - JobKorea JSON-LD fallback으로 수집한 공고의 상세 JD 품질을 계속 샘플링
 - Rallit/Jumpit/RocketPunch 상세 parser shape 변경 감지용 fixture를 주기적으로 갱신
 - Source registry/docs/config/test refs 일치 여부를 release 전 체크리스트로 유지
 - Feed stored feedback into deterministic relevance evaluation without live external LLM defaults
 - Add regression cases for false negatives, false positives, and user deal-breaker drift
 - Expand scheduled history queries for source health, recommendation changes, personal_info coverage, and filter-rule effects
+- Define Codex thread timeout/retry and privacy-safe host logging policy without raw prompt or response text
+- Define retention and cleanup policy for the structured model-context cache
 - Add source-health maintenance command that samples enabled source parsers and flags zero-candidate or shape-drift failures
 - Define artifact retention and cleanup policy for reports, evidence transcripts, DB rows, and feedback history
 - Add privacy-first onboarding docs for personal_info, local storage, allowed persisted fields, and excluded/non-target sources

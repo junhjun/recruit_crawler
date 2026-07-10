@@ -1,6 +1,6 @@
 # Recruit Crawler TODO
 
-마지막 업데이트: 2026-07-07
+마지막 업데이트: 2026-07-09
 
 ## 원칙
 
@@ -12,7 +12,6 @@
 
 ### Phase 1 — Source reliability maintenance
 
-- [ ] Saramin/Wanted 검색/목록 discovery를 `detail_urls` 직접 지정에서 no-human public discovery로 확장
 - [ ] JobKorea JSON-LD fallback으로 수집한 공고의 상세 JD 품질을 계속 샘플링
 - [ ] Rallit/Jumpit/RocketPunch 상세 parser shape 변경 감지용 fixture를 주기적으로 갱신
 - [ ] Source registry/docs/config/test refs 일치 여부를 release 전 체크리스트로 유지
@@ -25,6 +24,8 @@
 ### Phase 3 — Personal history and customization
 
 - [ ] Expand scheduled history queries for source health, recommendation changes, personal_info coverage, and filter-rule effects
+- [ ] Define Codex thread timeout/retry and privacy-safe host logging policy without raw prompt or response text
+- [ ] Define retention and cleanup policy for the structured model-context cache
 
 ### Phase 4 — Codex scheduled product loop
 

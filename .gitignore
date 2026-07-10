@@ -39,4 +39,5 @@ htmlcov/
 # GJC/runtime evidence generated during local planning and verification
 .gjc/
 .omx/
+.omo/
 artifacts/

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import replace
 from pathlib import Path
-from typing import Any, Dict, Sequence
+from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence
 
 from .schemas import AppConfig, Profile, ScoringWeights, SourceManifest, Thresholds
 from .user_context import (
@@ -14,6 +14,9 @@ from .user_context import (
     profile_from_context,
 )
 from .source_registry import SourceRegistryError, validate_source_registry
+
+if TYPE_CHECKING:
+    from .model_context import ContextExtractionCache, ContextExtractor
 
 
 class ConfigError(ValueError):
@@ -142,14 +145,31 @@ def load_config(path: Path, *, allow_real_sources: bool = False) -> AppConfig:
     )
 
 
-def apply_context_documents(config: AppConfig, paths: Sequence[Path]) -> AppConfig:
-    contexts = [parse_context_document(path) for path in paths]
-    context = merge_user_contexts(contexts)
+def apply_context_documents(
+    config: AppConfig,
+    paths: Sequence[Path],
+    *,
+    extractor: Optional["ContextExtractor"] = None,
+    cache: Optional["ContextExtractionCache"] = None,
+) -> AppConfig:
+    if extractor is not None:
+        from .model_context import parse_context_documents_with_extractor
+
+        context = parse_context_documents_with_extractor(paths, extractor, cache=cache)
+    else:
+        contexts = [parse_context_document(path) for path in paths]
+        context = merge_user_contexts(contexts)
     return replace(config, profile=profile_from_context(context), user_context=context)
 
 
-def apply_context_document(config: AppConfig, path: Path) -> AppConfig:
-    return apply_context_documents(config, [path])
+def apply_context_document(
+    config: AppConfig,
+    path: Path,
+    *,
+    extractor: Optional["ContextExtractor"] = None,
+    cache: Optional["ContextExtractionCache"] = None,
+) -> AppConfig:
+    return apply_context_documents(config, [path], extractor=extractor, cache=cache)
 
 
 def apply_supplemental_answers(config: AppConfig, answers: Dict[str, str]) -> AppConfig:
