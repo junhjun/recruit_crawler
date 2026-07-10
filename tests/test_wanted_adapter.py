@@ -160,6 +160,64 @@ class WantedAdapterTests(unittest.TestCase):
         self.assertEqual(candidates[0].source_posting_id, "371139")
         self.assertIn("데이터 수집", candidates[0].raw_jd["responsibilities"][0])
 
+    def test_wanted_adapter_discovers_next_data_wd_ids_from_listing(self) -> None:
+        search_url = "https://www.wanted.co.kr/search?query=python&tab=position"
+        detail_url = "https://www.wanted.co.kr/wd/371139"
+        manifest = SourceManifest(
+            source_id="wanted",
+            enabled=True,
+            access_mode="public_page",
+            auth_required=False,
+            tos_review_status="pass",
+            domains=["www.wanted.co.kr"],
+            rate_limit="1 request / second",
+            failure_mode="skip_source",
+            allowed_persisted_fields=[],
+            options={
+                "search_urls": [search_url],
+                "link_include_keywords": ["python"],
+                "candidate_include_keywords": ["python"],
+                "require_robots": False,
+                "explicit_automated_permission": True,
+                "delay_seconds": 0,
+            },
+        )
+        list_html = """
+        <script id="__NEXT_DATA__" type="application/json">
+        {"props":{"pageProps":{"positions":[
+          {"id":371139,"position":"Python 자동화 개발자"},
+          {"id":222222,"position":"주방 보조"}
+        ]}}}
+        </script>
+        """
+        detail_html = """
+        <html><head><meta property="og:title" content="[엑스보스] Python 자동화 개발자 채용 공고 | 원티드"></head><body>
+        엑스보스∙서울 강서구∙경력 1-5년
+        Python 자동화 개발자
+        주요업무
+        Python 데이터 수집 자동화 개발
+        자격요건
+        Python Requests Playwright 경험
+        마감일
+        2026.07.25
+        근무지역
+        서울 강서구
+        </body></html>
+        """
+        adapter = WantedAdapter(manifest)
+
+        def fake_fetch(url: str) -> HttpResponse:
+            if url == search_url:
+                return HttpResponse(url, list_html)
+            self.assertEqual(url, detail_url)
+            return HttpResponse(url, detail_html)
+
+        with patch.object(adapter, "_fetch", side_effect=fake_fetch):
+            candidates = adapter.collect()
+
+        self.assertEqual(len(candidates), 1)
+        self.assertEqual(candidates[0].source_url, detail_url)
+        self.assertEqual(candidates[0].source_posting_id, "371139")
 
 if __name__ == "__main__":
     unittest.main()

@@ -93,9 +93,6 @@
         "max_pages": 20,
         "delay_seconds": 1,
         "require_robots": false,
-        "detail_urls": [
-          "https://www.saramin.co.kr/zf_user/jobs/relay/view-detail?rec_idx=54106686&rec_seq=0"
-        ],
         "explicit_automated_permission": true,
         "search_urls": [
           "https://www.saramin.co.kr/zf_user/search/recruit?searchword=python%20ai%20data%20llm"
@@ -133,19 +130,21 @@
       "target_lane": "public_http",
       "candidate_lanes": [],
       "automation_level": "no_human",
-      "status_reason": "public HTTP search/listing에서 relay 상세 URL을 발견하고 공개 detail iframe URL로 정규화해 JD 본문 섹션을 수집합니다.",
+      "status_reason": "public HTTP search/listing에서 anchor 또는 script payload의 relay 상세 URL을 발견하고 공개 detail iframe URL로 정규화해 JD 본문 섹션을 수집합니다.",
       "evidence": [
         "tests/test_saramin_adapter.py::test_saramin_adapter_collects_public_detail_body_without_api",
         "artifacts/ultragoal_g002/saramin_browser_automation_iframe_details.json",
         "artifacts/ultragoal_g002/saramin_browser_automation_detail.json",
-        "tests/test_saramin_adapter.py::test_saramin_adapter_discovers_public_relay_detail_urls_from_listing"
+        "tests/test_saramin_adapter.py::test_saramin_adapter_discovers_public_relay_detail_urls_from_listing",
+        "tests/test_saramin_adapter.py::test_saramin_adapter_discovers_script_embedded_relay_ids_from_listing"
       ],
       "blockers": [],
       "next_action": "목록/detail shape drift 시 fixture/parser test를 갱신합니다.",
       "adapter_code_path": "src/recruit_crawler/sources/platforms.py::SaraminAdapter",
       "test_refs": [
         "tests/test_saramin_adapter.py::test_saramin_adapter_collects_public_detail_body_without_api",
-        "tests/test_saramin_adapter.py::test_saramin_adapter_discovers_public_relay_detail_urls_from_listing"
+        "tests/test_saramin_adapter.py::test_saramin_adapter_discovers_public_relay_detail_urls_from_listing",
+        "tests/test_saramin_adapter.py::test_saramin_adapter_discovers_script_embedded_relay_ids_from_listing"
       ],
       "docs_refs": [
         "docs/source_collection_matrix.md",
@@ -304,12 +303,10 @@
         "delay_seconds": 1,
         "require_robots": false,
         "explicit_automated_permission": true,
-        "detail_urls": [
-          "https://www.wanted.co.kr/wd/371139"
-        ],
         "search_urls": [
-          "https://www.wanted.co.kr/search?query=python%20ai%20data%20llm&tab=position"
+          "https://www.wanted.co.kr/search?query=python&tab=position"
         ],
+        "api_url": "https://www.wanted.co.kr/api/chaos/search/v1/position",
         "exclude_url_patterns": [
           "login",
           "signup"
@@ -362,19 +359,23 @@
       "target_lane": "public_http",
       "candidate_lanes": [],
       "automation_level": "no_human",
-      "status_reason": "public HTTP search/listing에서 공개 /wd detail 링크를 발견하고 detail HTML parser로 JD 본문을 수집합니다.",
+      "status_reason": "public HTTP search/listing에서 anchor 또는 Next data의 /wd detail 링크를 발견하고, shell만 반환하면 review된 공개 search API로 detail URL을 찾은 뒤 detail HTML parser로 JD 본문을 수집합니다.",
       "evidence": [
         "tests/test_wanted_adapter.py::test_wanted_adapter_collects_public_detail_body_without_manual_payload",
         "artifacts/ultragoal_g003/wanted_browser_detail.json",
         "artifacts/ultragoal_g003/wanted_browser_transcript.json",
-        "tests/test_wanted_adapter.py::test_wanted_adapter_discovers_public_wd_urls_from_listing"
+        "tests/test_wanted_adapter.py::test_wanted_adapter_discovers_public_wd_urls_from_listing",
+        "tests/test_wanted_adapter.py::test_wanted_adapter_discovers_next_data_wd_ids_from_listing",
+        "tests/test_wanted_policy.py::test_skeleton_listing_uses_reviewed_public_search_endpoint"
       ],
       "blockers": [],
       "next_action": "검색/detail shape drift 시 fixture/parser test를 갱신합니다.",
       "adapter_code_path": "src/recruit_crawler/sources/platforms.py::WantedAdapter",
       "test_refs": [
         "tests/test_wanted_adapter.py::test_wanted_adapter_collects_public_detail_body_without_manual_payload",
-        "tests/test_wanted_adapter.py::test_wanted_adapter_discovers_public_wd_urls_from_listing"
+        "tests/test_wanted_adapter.py::test_wanted_adapter_discovers_public_wd_urls_from_listing",
+        "tests/test_wanted_adapter.py::test_wanted_adapter_discovers_next_data_wd_ids_from_listing",
+        "tests/test_wanted_policy.py::test_skeleton_listing_uses_reviewed_public_search_endpoint"
       ],
       "docs_refs": [
         "docs/source_collection_matrix.md",

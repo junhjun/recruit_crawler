@@ -11,11 +11,11 @@ from datetime import datetime, timezone
 from html import unescape
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from urllib.parse import urljoin
+from urllib.parse import parse_qs, urljoin, urlparse
 
 
 from ..schemas import PostingCandidate, SourceManifest
-from .http import PublicJobsHttpAdapter, SourceAccessError, _date_prefix
+from .http import PublicJobsHttpAdapter, SourceAccessError, _contains_any, _date_prefix
 
 
 def _merged_options(manifest: SourceManifest, defaults: Dict[str, Any]) -> SourceManifest:
@@ -68,7 +68,9 @@ class SaraminAdapter(PublicJobsHttpAdapter):
             self.options.get("detail_urls") or self.options.get("search_urls") or self.options.get("start_urls")
         ):
             self._validate_access()
-            urls = [str(value) for value in self.options.get("detail_urls", [])] or self._seed_urls()
+            urls = self._seed_urls() if self.options.get("search_urls") or self.options.get("start_urls") else [
+                str(value) for value in self.options.get("detail_urls", [])
+            ]
             candidates = []
             for url in urls[: self.max_pages]:
                 try:
@@ -110,6 +112,14 @@ class SaraminAdapter(PublicJobsHttpAdapter):
     def discover_urls(self) -> List[str]:
         urls = super().discover_urls()
         return [_saramin_detail_url(url) for url in urls][: self.max_pages]
+
+    def _discover_urls_from_listing(
+        self,
+        base_url: str,
+        html: str,
+        parser: Any,
+    ) -> List[str]:
+        return _saramin_detail_urls_from_listing(html, self.link_include_keywords)
 
 
 class JobKoreaAdapter(PublicJobsHttpAdapter):
@@ -604,6 +614,19 @@ def _saramin_detail_url(url: str) -> str:
         return f"https://www.saramin.co.kr/zf_user/jobs/relay/view-detail?rec_idx={rec_idx}&rec_seq=0"
     return url
 
+
+def _saramin_detail_urls_from_listing(html: str, link_include_keywords: List[str]) -> List[str]:
+    urls: List[str] = []
+    for block in re.findall(r"\{[^{}]*rec_idx[^{}]*\}", html, re.S):
+        rec_idx = _first_match(block, r'"rec_idx"\s*:\s*"?(\d+)"?') or _first_match(block, r"'rec_idx'\s*:\s*'?(\d+)'?")
+        if not rec_idx:
+            continue
+        if link_include_keywords and not _contains_any(block, link_include_keywords):
+            continue
+        urls.append(f"https://www.saramin.co.kr/zf_user/jobs/relay/view-detail?rec_idx={rec_idx}&rec_seq=0")
+    return list(dict.fromkeys(urls))
+
+
 def _candidate_from_saramin_detail(source_url: str, html: str) -> Optional[PostingCandidate]:
     text = _clean_visible_text(html)
     responsibilities = _section_between(text, ["주요업무", "담당업무"], ["자격요건", "지원자격", "우대사항", "마감일 및 근무지", "복지 및 혜택"])
@@ -765,6 +788,51 @@ def _wanted_detail_company(text: str, html: str) -> str:
 def _wanted_skill_terms(text: str) -> List[str]:
     known = ["Python", "FastAPI", "RAG", "LLM", "Git", "MySQL", "JSON", "Excel", "PostgreSQL", "SQLite", "Selenium", "Playwright"]
     return [skill for skill in known if skill.lower() in text.lower()]
+
+
+def _wanted_detail_urls_from_listing(html: str, link_include_keywords: List[str]) -> List[str]:
+    urls: List[str] = []
+    for block in re.findall(r"\{[^{}]*\"id\"\s*:\s*\d+[^{}]*\}", html, re.S):
+        position_id = _first_match(block, r'"id"\s*:\s*(\d+)')
+        if not position_id:
+            continue
+        if link_include_keywords and not _contains_any(block, link_include_keywords):
+            continue
+        urls.append(f"https://www.wanted.co.kr/wd/{position_id}")
+    return list(dict.fromkeys(urls))
+
+
+def _wanted_search_query(options: Dict[str, Any]) -> str:
+    direct = str(options.get("keyword") or options.get("query") or "").strip()
+    if direct:
+        return direct
+    for url in options.get("search_urls", []):
+        parsed = urlparse(str(url))
+        query_values = parse_qs(parsed.query).get("query", [])
+        if query_values and query_values[0].strip():
+            return query_values[0].strip()
+    return ""
+
+
+def _wanted_detail_urls_from_search_api(text: str) -> List[str]:
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        return []
+    data = payload.get("data") if isinstance(payload, dict) else []
+    if not isinstance(data, list):
+        return []
+    urls: List[str] = []
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        position_id = item.get("id")
+        if isinstance(position_id, bool) or not str(position_id).isdigit():
+            continue
+        urls.append(f"https://www.wanted.co.kr/wd/{position_id}")
+    return list(dict.fromkeys(urls))
+
+
 class WantedAdapter(PublicJobsHttpAdapter):
     def __init__(self, manifest: SourceManifest):
         super().__init__(
@@ -790,7 +858,9 @@ class WantedAdapter(PublicJobsHttpAdapter):
             self.options.get("detail_urls") or self.options.get("search_urls") or self.options.get("start_urls")
         ):
             self._validate_access()
-            urls = [str(value) for value in self.options.get("detail_urls", [])] or self._seed_urls()
+            urls = self._seed_urls() if self.options.get("search_urls") or self.options.get("start_urls") else [
+                str(value) for value in self.options.get("detail_urls", [])
+            ]
             candidates = []
             for url in urls[: self.max_pages]:
                 try:
@@ -812,6 +882,34 @@ class WantedAdapter(PublicJobsHttpAdapter):
             )
         return super().collect()
 
+    def discover_urls(self) -> List[str]:
+        urls = super().discover_urls()
+        if urls:
+            return urls[: self.max_pages]
+        return self._discover_urls_from_public_search_api()[: self.max_pages]
+
+    def _discover_urls_from_listing(
+        self,
+        base_url: str,
+        html: str,
+        parser: Any,
+    ) -> List[str]:
+        return _wanted_detail_urls_from_listing(html, self.link_include_keywords)
+
+    def _discover_urls_from_public_search_api(self) -> List[str]:
+        query = _wanted_search_query(self.options)
+        if not query:
+            return []
+        endpoint = str(
+            self.options.get(
+                "api_url",
+                "https://www.wanted.co.kr/api/chaos/search/v1/position",
+            )
+        )
+        params = {"query": query, "limit": self.max_pages}
+        params.update(dict(self.options.get("api_params", {})))
+        response = self._get_fetch(endpoint, params)
+        return _wanted_detail_urls_from_search_api(response.text)
 
 class JumpitAdapter(PublicJobsHttpAdapter):
     def __init__(self, manifest: SourceManifest):

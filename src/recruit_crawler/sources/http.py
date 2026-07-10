@@ -147,6 +147,7 @@ class PublicJobsHttpAdapter:
             response = self._fetch(url)
             parser = self._parse_html(response.text)
             discovered.extend(self._filter_job_links(response.url, parser.anchors))
+            discovered.extend(self._discover_urls_from_listing(response.url, response.text, parser))
             self._sleep()
         return _dedupe(discovered)[: self.max_pages]
 
@@ -297,6 +298,14 @@ class PublicJobsHttpAdapter:
             if any(pattern.search(absolute) for pattern in include_patterns):
                 urls.append(absolute)
         return _dedupe(urls)
+
+    def _discover_urls_from_listing(
+        self,
+        base_url: str,
+        html: str,
+        parser: AnchorAndScriptParser,
+    ) -> List[str]:
+        return []
 
     def _candidates_from_json_ld(
         self,

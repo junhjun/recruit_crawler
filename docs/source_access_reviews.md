@@ -5,7 +5,7 @@
 공통 원칙:
 
 - Target workflow는 사람 개입 없는 자동 수집만 허용합니다.
-- API/partner payload/manual export/manual postings/user-operated Chrome extension/user-operated browser-use/OCR 수동 검토는 target enable 근거가 아닙니다.
+- 인증·partner API, manual export/manual postings/user-operated Chrome extension/user-operated browser-use/OCR 수동 검토는 target enable 근거가 아닙니다. source review를 통과한 공개·무인증 API는 public HTTP target 경로로 사용할 수 있습니다.
 - `blocked`, `deferred`, `excluded` source는 `target_lane: null`이어야 합니다.
 
 ## 회사 공식 채용 페이지
@@ -48,7 +48,7 @@ Decision: keep all company-careers candidates excluded from the near-term target
 - Allowed persisted fields: source URL, title, company, location, deadline, structured snapshot
 - Failure mode: skip source
 
-Decision: 공식 API는 target workflow에서 제외합니다. 이미지형 JD/OCR 및 user-operated Chrome capture도 target completion이 아닙니다. 공개 검색/목록에서 relay view URL을 찾고 공개 relay detail iframe URL로 정규화해 인증 없이 노출되는 JD 본문 섹션을 수집하며, `SaraminAdapter` public-page parser/discovery test와 no-human browser automation iframe evidence로 검증했습니다.
+Decision: 공식 API는 target workflow에서 제외합니다. 이미지형 JD/OCR 및 user-operated Chrome capture도 target completion이 아닙니다. 공개 검색/목록에서 anchor 또는 script payload의 relay view URL을 찾고 공개 relay detail iframe URL로 정규화해 인증 없이 노출되는 JD 본문 섹션을 수집하며, `SaraminAdapter` public-page parser/discovery test와 no-human browser automation iframe evidence로 검증했습니다.
 
 ## 잡코리아
 
@@ -95,7 +95,7 @@ Decision: live sample에서 enabled target입니다. Adapter는 public position 
 - Allowed persisted fields: source URL, title, company, location, deadline, structured snapshot
 - Failure mode: skip source
 
-Decision: manual/export/user capture fallback은 target completion이 아닙니다. 공개 검색/목록에서 `/wd/` detail 링크를 찾고, 공개 detail HTML은 `WantedAdapter` public-page parser/discovery test로 JD 본문을 수집합니다. no-human browser automation 검증 증거는 유지하지만 target path는 auth/session/private profile 없이 public HTTP만 사용합니다.
+Decision: manual/export/user capture, 인증·partner API는 target completion이 아닙니다. 공개 검색/목록에서 anchor 또는 Next data의 `/wd/` detail 링크를 찾고, shell만 반환하면 review된 공개 search API에서 detail URL을 찾습니다. 공개 detail HTML은 `WantedAdapter` public-page parser/discovery test로 JD 본문을 수집합니다. target path는 auth/session/private profile 없이 public HTTP만 사용합니다.
 
 ## LinkedIn
 

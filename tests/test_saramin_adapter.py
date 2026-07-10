@@ -178,6 +178,65 @@ class SaraminAdapterTests(unittest.TestCase):
         self.assertEqual(candidates[0].source_posting_id, "54106686")
         self.assertIn("추천 시스템", candidates[0].raw_jd["responsibilities"][0])
 
+    def test_saramin_adapter_discovers_script_embedded_relay_ids_from_listing(self) -> None:
+        search_url = "https://www.saramin.co.kr/zf_user/search/recruit?searchword=python"
+        detail_url = "https://www.saramin.co.kr/zf_user/jobs/relay/view-detail?rec_idx=54106686&rec_seq=0"
+        manifest = SourceManifest(
+            source_id="saramin",
+            enabled=True,
+            access_mode="public_page",
+            auth_required=False,
+            tos_review_status="pass",
+            domains=["www.saramin.co.kr"],
+            rate_limit="1 request / second",
+            failure_mode="skip_source",
+            allowed_persisted_fields=[],
+            options={
+                "search_urls": [search_url],
+                "link_include_keywords": ["python"],
+                "candidate_include_keywords": ["python"],
+                "require_robots": False,
+                "explicit_automated_permission": True,
+                "delay_seconds": 0,
+            },
+        )
+        list_html = """
+        <script>
+        window.recruitList = [
+          {"rec_idx": "54106686", "title": "Python AI 엔지니어"},
+          {"rec_idx": "11111111", "title": "주방 보조"}
+        ];
+        </script>
+        """
+        detail_html = """
+        <html><body>
+        Python AI 엔지니어
+        주요업무
+        Python 기반 추천 시스템 개발
+        자격요건
+        Python API 개발 경험
+        우대사항
+        LLM 서비스 경험
+        마감일 및 근무지
+        근무지
+        - 서울 강남구
+        </body></html>
+        """
+        adapter = SaraminAdapter(manifest)
+
+        def fake_fetch(url: str) -> HttpResponse:
+            if url == search_url:
+                return HttpResponse(url, list_html)
+            self.assertEqual(url, detail_url)
+            return HttpResponse(url, detail_html)
+
+        with patch.object(adapter, "_fetch", side_effect=fake_fetch):
+            candidates = adapter.collect()
+
+        self.assertEqual(len(candidates), 1)
+        self.assertEqual(candidates[0].source_url, detail_url)
+        self.assertEqual(candidates[0].source_posting_id, "54106686")
+
 
 if __name__ == "__main__":
     unittest.main()
