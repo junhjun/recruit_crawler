@@ -66,6 +66,15 @@ class DocumentContextParserTests(unittest.TestCase):
         self.assertIn("Seoul", context.preferred_locations)
         self.assertEqual(context.max_experience_years, 2)
 
+    def test_plaintext_locations_preserve_korean_commas_and_remote_hybrid_slash(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "preferences.md"
+            path.write_text("Locations: 서울, 판교, 원격/하이브리드 상관없음\n", encoding="utf-8")
+
+            context = parse_context_document(path)
+
+        self.assertEqual(context.preferred_locations, ["서울", "판교", "원격/하이브리드 상관없음"])
+
     def test_private_canary_document_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "private.md"

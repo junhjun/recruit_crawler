@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import io
+import json
 import sys
+import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -10,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from recruit_crawler.cli import main as cli_main
-from recruit_crawler.status_report import build_progress_brief, check_status_report, iter_feature_refs, load_feature_ledger
+from recruit_crawler.status_report import build_progress_brief, check_status_report, iter_feature_refs, load_feature_ledger, write_status_report
 
 KNOWN_ENTRYPOINT_PREFIXES = (
     "recruit-crawler ",
@@ -41,6 +43,28 @@ class RepositoryHarnessTests(unittest.TestCase):
         )
 
         self.assertTrue(result.ok, result.message)
+
+    def test_status_report_write_refreshes_feature_ledger_date(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            features_path = tmp_path / "features.json"
+            output_path = tmp_path / "status.md"
+            source_features_path = ROOT / "docs" / "status" / "features.json"
+            ledger = json.loads(source_features_path.read_text(encoding="utf-8"))
+            ledger["updated_at"] = "1999-01-01"
+            features_path.write_text(json.dumps(ledger, ensure_ascii=False), encoding="utf-8")
+
+            content = write_status_report(
+                config_path=ROOT / "config" / "live_sources.sample.json",
+                features_path=features_path,
+                output_path=output_path,
+                todo_path=ROOT / "TODO.md",
+            )
+
+            refreshed = json.loads(features_path.read_text(encoding="utf-8"))
+            self.assertNotEqual(refreshed["updated_at"], "1999-01-01")
+            self.assertIn(f"상태일: {refreshed['updated_at']}", content)
+            self.assertEqual(output_path.read_text(encoding="utf-8"), content)
 
     def test_progress_brief_is_token_minimal_status_harness(self) -> None:
         brief = build_progress_brief(

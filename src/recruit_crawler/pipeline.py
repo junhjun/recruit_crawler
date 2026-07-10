@@ -11,6 +11,7 @@ from .schemas import AppConfig, FitAssessment, PostingCandidate, RunSummary, Sou
 from .scorer import exceeds_experience_limit, is_expired, rank_snapshots
 from .sources.base import build_source_adapter
 from .summarizer import render_markdown_report
+from .user_context import missing_context_fields
 
 
 LOCAL_ACCESS_MODES = {"fixture", "manual"}
@@ -164,9 +165,44 @@ def run_scheduled_run(config: AppConfig, run_date: date) -> Tuple[RunSummary, st
     return _run_pipeline(config, run_date, report_slug="recruiting-scheduled-run")
 
 
+def build_live_run_preflight_gate(run_date: date, config: AppConfig) -> dict[str, Any]:
+    missing_fields = missing_context_fields(config.user_context)
+    findings = []
+    if missing_fields:
+        findings.append(
+            {
+                "severity": "fail",
+                "source_id": None,
+                "message": "live-run missing required user context: " + ", ".join(missing_fields),
+            }
+        )
+    status = "fail" if findings else "pass"
+    return {
+        "schema_version": 1,
+        "command_mode": "live-run",
+        "status": status,
+        "run_date": run_date.isoformat(),
+        "context_status": "needs_context" if missing_fields else "complete",
+        "missing_context": missing_fields,
+        "sources_attempted": [],
+        "candidates_collected": 0,
+        "sources": [],
+        "findings": findings,
+    }
+
+
 def build_live_run_quality_gate(summary: RunSummary, config: AppConfig) -> dict[str, Any]:
+    missing_fields = missing_context_fields(config.user_context)
     enabled_source_ids = {source.source_id for source in config.sources if source.enabled}
     findings = []
+    if missing_fields:
+        findings.append(
+            {
+                "severity": "fail",
+                "source_id": None,
+                "message": "live-run missing required user context: " + ", ".join(missing_fields),
+            }
+        )
     source_rows = []
     for metric in summary.source_metrics:
         enabled = metric.source_id in enabled_source_ids
@@ -209,8 +245,11 @@ def build_live_run_quality_gate(summary: RunSummary, config: AppConfig) -> dict[
     status = "fail" if any(item["severity"] == "fail" for item in findings) else "pass"
     return {
         "schema_version": 1,
+        "command_mode": "live-run",
         "status": status,
         "run_date": summary.run_date.isoformat(),
+        "context_status": "needs_context" if missing_fields else "complete",
+        "missing_context": missing_fields,
         "sources_attempted": summary.sources_attempted,
         "candidates_collected": summary.candidates_collected,
         "sources": source_rows,

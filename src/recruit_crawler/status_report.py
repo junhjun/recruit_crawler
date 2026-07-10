@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from pathlib import Path
 from typing import Iterable
 
@@ -132,6 +133,7 @@ def build_progress_brief(
 
 
 def write_status_report(*, config_path: Path, features_path: Path, output_path: Path, todo_path: Path) -> str:
+    _refresh_feature_ledger_date(features_path, date.today().isoformat())
     content = build_status_report(
         config_path=config_path,
         features_path=features_path,
@@ -140,6 +142,17 @@ def write_status_report(*, config_path: Path, features_path: Path, output_path: 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(content, encoding="utf-8")
     return content
+
+
+def _refresh_feature_ledger_date(features_path: Path, today: str) -> None:
+    feature_ledger = load_feature_ledger(features_path)
+    if feature_ledger.get("updated_at") == today:
+        return
+    feature_ledger["updated_at"] = today
+    features_path.write_text(
+        json.dumps(feature_ledger, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
 
 
 def build_status_report(*, config_path: Path, features_path: Path, todo_path: Path) -> str:

@@ -7,9 +7,10 @@ from typing import Optional
 
 from .browser_evidence import build_browser_evidence, write_browser_evidence
 from .capture_import import CaptureImportError, build_capture_quality_gate, import_capture_files, select_capture_files
-from .config import ConfigError, apply_context_documents, apply_supplemental_answers, load_config
+from .cli_context import context_doctor_answers, load_config_with_context
+from .config import ConfigError, load_config
 from .context_doctor import ContextDoctorRequest, run_context_doctor
-from .pipeline import build_live_run_quality_gate, run_capture_import, run_dry_run, run_live_run
+from .pipeline import run_capture_import, run_dry_run
 from .scheduled import ScheduledRunRequest, run_scheduled_job
 from .source_registry import source_status_rows
 from .status_report import StatusReportError, build_progress_brief, check_status_report, write_status_report
@@ -23,63 +24,9 @@ def _parse_date(value: Optional[str]) -> date:
     return date.fromisoformat(value)
 
 
-def _apply_supplemental_interview(config):
-    from .user_context import missing_context_fields, supplemental_questions
-
-    missing_fields = missing_context_fields(config.user_context)
-    if not missing_fields:
-        return config
-    questions = supplemental_questions(config.user_context)
-    answers = {}
-    print("Supplemental context interview:")
-    for field, question in zip(missing_fields, questions):
-        try:
-            answer = input(f"- {question}\n> ")
-        except EOFError as exc:
-            raise ConfigError(f"missing context requires supplemental answer for {field}") from exc
-        if answer.strip():
-            answers[field] = answer.strip()
-    if not answers:
-        return config
-    return apply_supplemental_answers(config, answers)
-
-
-def _load_config_with_context(args: argparse.Namespace, *, allow_real_sources: bool, interview: bool):
-    config = load_config(args.config, allow_real_sources=allow_real_sources)
-    if args.context_doc:
-        config = apply_context_documents(config, args.context_doc)
-        if interview:
-            config = _apply_supplemental_interview(config)
-    return config
-
-
-def _context_doctor_answers(args: argparse.Namespace) -> dict[str, str]:
-    config = load_config(args.config, allow_real_sources=True)
-    context_docs = list(args.context_doc or [])
-    if args.output.exists() and args.output not in context_docs:
-        context_docs.append(args.output)
-    if context_docs:
-        config = apply_context_documents(config, context_docs)
-    from .user_context import missing_context_fields, supplemental_questions
-
-    missing_fields = missing_context_fields(config.user_context)
-    if not missing_fields:
-        return {}
-    print("Context onboarding interview:")
-    answers = {}
-    for field, question in zip(missing_fields, supplemental_questions(config.user_context)):
-        try:
-            answer = input(f"- {question}\n> ")
-        except EOFError as exc:
-            raise ConfigError(f"missing context requires supplemental answer for {field}") from exc
-        if answer.strip():
-            answers[field] = answer.strip()
-    return answers
-
-
 def handle_dry_run(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
     try:
-        config = _load_config_with_context(args, allow_real_sources=False, interview=True)
+        config = load_config_with_context(args, allow_real_sources=False, interview=True)
         summary, report, _ranked = run_dry_run(config, _parse_date(args.run_date))
     except (ConfigError, ValueError, FileNotFoundError) as exc:
         parser.error(str(exc))
@@ -90,29 +37,9 @@ def handle_dry_run(args: argparse.Namespace, parser: argparse.ArgumentParser) ->
     return 0
 
 
-def handle_live_run(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
-    try:
-        config = _load_config_with_context(args, allow_real_sources=True, interview=True)
-        summary, report, _ranked = run_live_run(config, _parse_date(args.run_date))
-        gate = build_live_run_quality_gate(summary, config)
-        if args.quality_gate_output:
-            args.quality_gate_output.parent.mkdir(parents=True, exist_ok=True)
-            args.quality_gate_output.write_text(json.dumps(gate, ensure_ascii=False, indent=2), encoding="utf-8")
-    except (ConfigError, ValueError, FileNotFoundError) as exc:
-        parser.error(str(exc))
-        return 2
-    print(f"Report written: {summary.report_path}")
-    print(f"Live-run quality gate status: {gate['status']}")
-    if args.quality_gate_output:
-        print(f"Live-run quality gate written: {args.quality_gate_output}")
-    if args.print_report:
-        print(report)
-    return 1 if gate["status"] == "fail" else 0
-
-
 def handle_scheduled_run(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
     try:
-        config = _load_config_with_context(args, allow_real_sources=True, interview=False)
+        config = load_config_with_context(args, allow_real_sources=True, interview=False)
         result = run_scheduled_job(
             ScheduledRunRequest(
                 config=config,
@@ -269,7 +196,7 @@ def handle_browser_evidence(args: argparse.Namespace, parser: argparse.ArgumentP
 def handle_context_doctor(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
     try:
         config = load_config(args.config, allow_real_sources=True)
-        answers = _context_doctor_answers(args)
+        answers = context_doctor_answers(args)
         result = run_context_doctor(
             ContextDoctorRequest(
                 config=config,

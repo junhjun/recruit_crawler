@@ -166,6 +166,55 @@ class ScheduledPolicyTests(unittest.TestCase):
             any("scheduled-run source policy rejected enabled source" in item["message"] for item in gate["findings"])
         )
 
+    def test_scheduled_run_network_preflight_blocks_before_collection(self) -> None:
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(output), patch(
+            "recruit_crawler.scheduled.run_scheduled_run",
+            side_effect=AssertionError("collection must not start when DNS is unavailable"),
+        ), patch(
+            "recruit_crawler.scheduled._resolve_domain",
+            side_effect=OSError("nodename nor servname provided, or not known"),
+        ):
+            tmp_path = Path(tmp)
+            raw = json.loads(CONFIG.read_text(encoding="utf-8"))
+            raw["output_dir"] = str(tmp_path / "reports")
+            raw["sources"][0]["access_mode"] = "public_page"
+            raw["sources"][0]["target_status"] = "enabled"
+            raw["sources"][0]["target_lane"] = "public_http"
+            raw["sources"][0]["automation_level"] = "no_human"
+            raw["sources"][0]["tos_review_status"] = "pass"
+            raw["sources"][0]["domains"] = ["jobs.example.test"]
+            raw["sources"][0]["adapter_code_path"] = "src/recruit_crawler/sources/base.py::FixtureAdapter"
+            raw["sources"][0]["test_refs"] = [
+                "tests/test_scheduled_policy.py::test_scheduled_run_network_preflight_blocks_before_collection"
+            ]
+            raw["sources"][0]["docs_refs"] = ["docs/source_collection_matrix.md"]
+            config_path = tmp_path / "network_config.json"
+            config_path.write_text(json.dumps(raw), encoding="utf-8")
+            gate_path = tmp_path / "scheduled_quality_gate.json"
+
+            exit_code = cli_main(
+                [
+                    "scheduled-run",
+                    "--config",
+                    str(config_path),
+                    "--run-date",
+                    "2026-06-30",
+                    "--quality-gate-output",
+                    str(gate_path),
+                ]
+            )
+            gate = json.loads(gate_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(exit_code, 1)
+        self.assertFalse(gate["report_generated"])
+        self.assertEqual(gate["status"], "fail")
+        self.assertEqual(gate["sources_attempted"], [])
+        self.assertTrue(
+            any("scheduled-run network preflight failed" in item["message"] for item in gate["findings"])
+        )
+        self.assertIn("Scheduled run blocked", output.getvalue())
+
     def test_scheduled_run_private_context_uses_privacy_exit_code(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

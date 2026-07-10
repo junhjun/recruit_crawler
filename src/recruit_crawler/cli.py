@@ -13,12 +13,12 @@ from .cli_handlers import (
     handle_dry_run,
     handle_feedback_add,
     handle_feedback_export,
-    handle_live_run,
     handle_scheduled_history,
     handle_scheduled_run,
     handle_source_status,
     handle_status_report,
 )
+from .live_run import handle_live_run
 
 
 CommandHandler = Callable[[argparse.Namespace, argparse.ArgumentParser], int]
@@ -53,6 +53,7 @@ def build_parser() -> argparse.ArgumentParser:
     live_run.add_argument("--print-report", action="store_true", help="print generated Markdown to stdout")
     live_run.add_argument("--quality-gate-output", type=Path, help="write live-run source quality gate JSON")
     live_run.add_argument("--context-doc", type=Path, action="append", help="personal context document; repeat for multiple .txt, .md, .pdf, or .docx inputs")
+    live_run.add_argument("--interview-missing-context", action="store_true", help="prompt for missing context before live collection")
     scheduled_run = subparsers.add_parser("scheduled-run", help="run non-interactive daily report for Codex Scheduled")
     scheduled_run.add_argument("--config", type=Path, default=Path("config/live_sources.sample.json"))
     scheduled_run.add_argument("--run-date", help="YYYY-MM-DD date used for deterministic deadline checks")

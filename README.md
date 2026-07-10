@@ -45,13 +45,24 @@ PYTHONPATH=src python3 -m recruit_crawler.cli dry-run \
 
 `--context-doc` accepts `.txt`, `.md`, `.pdf`, and `.docx` files and can be repeated for multiple inputs such as resume + portfolio + preference notes. `config.profile` is a fallback/default for fixture runs; personalized runs should pass explicit context documents.
 
-When supplied context documents are missing required fields, the CLI starts a supplemental interview and asks only for the missing role, skill, location, or experience fields before scoring.
+When supplied context documents are missing required fields, automation-safe commands report `context_status: needs_context` instead of prompting. For a one-off terminal run, add `--interview-missing-context` to `live-run` to answer only the missing role, skill, location, or experience fields before collection. For persistent reuse, run `context-doctor` and pass the generated preferences file on later runs.
 
 Check source registry status:
 
 ```sh
 PYTHONPATH=src python3 -m recruit_crawler.cli source-status \
   --config config/live_sources.sample.json
+```
+
+Run live collection with explicit context docs. `live-run` is non-interactive by default; if required context is still missing, its quality gate fails with `context_status: needs_context` before source collection starts.
+
+```sh
+PYTHONPATH=src python3 -m recruit_crawler.cli live-run \
+  --config config/live_sources.sample.json \
+  --context-doc path/to/resume.md \
+  --context-doc path/to/preferences.md \
+  --run-date 2026-07-01 \
+  --quality-gate-output artifacts/scheduled/live_quality_gate.json
 ```
 
 Run the non-interactive scheduled CLI/service contract intended for later external schedulers such as Codex app `예약됨` or cron:
@@ -67,6 +78,8 @@ PYTHONPATH=src python3 -m recruit_crawler.cli scheduled-run \
 ```
 
 `scheduled-run` never prompts for missing context. Missing role, skill, location, or experience fields are written as `needs_context` quality-gate findings so an external scheduler can fail visibly instead of hanging. Its quality gate also includes a stable `run_identity.run_id` derived from command mode, run date, source config hash, and profile/filter hash so same-date reruns reuse deterministic report and gate artifacts.
+
+Live scheduled collection requires external DNS/network access. In a Codex sandbox or another locked-down runner, `scheduled-run` fails fast during network preflight and writes a quality-gate finding before source adapters start; run it with network approval or from the actual scheduler environment for a live collection pass.
 
 If a scheduled run reports `context_status: needs_context`, run `context-doctor` once from the Codex app or terminal to fill only the missing fields and persist them as an editable Markdown preferences document:
 
@@ -163,7 +176,7 @@ PYTHONPATH=src python3 -m unittest discover -s tests
 
 ### Troubleshooting and update flow
 
-- `context_status: needs_context`: run `context-doctor` to generate or update `personal_info/preferences.md`, then pass that file to `scheduled-run`; scheduled mode will not prompt.
+- `context_status: needs_context`: run `context-doctor` to generate or update `personal_info/preferences.md`, then pass that file to `live-run` or `scheduled-run`. `scheduled-run` never prompts; `live-run` only prompts when `--interview-missing-context` is explicitly supplied.
 - `source_policy` failure: disable non-target, manual, API, OCR, authenticated, partner-payload, or user-operated sources for scheduled mode.
 - Zero-candidate/parser drift failure: inspect the source row in the quality gate and keep the report on hold until the adapter fixture/parser is updated.
 - Privacy failure exit code `3`: remove private canary/session/token text from context or feedback reason inputs.

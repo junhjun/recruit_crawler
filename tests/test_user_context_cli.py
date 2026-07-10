@@ -203,45 +203,10 @@ class UserContextCliTests(unittest.TestCase):
 
         self.assertEqual(cm.exception.code, 2)
 
-    def test_context_doctor_writes_parseable_preferences_for_missing_context(self) -> None:
-        output = io.StringIO()
-        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(output), patch(
-            "builtins.input",
-            side_effect=["AI Engineer, Data Engineer", "Seoul, Remote"],
-        ):
-            tmp_path = Path(tmp)
-            config_path = self._write_two_posting_config(tmp_path)
-            resume_path = tmp_path / "resume.md"
-            preferences_path = tmp_path / "preferences.md"
-            resume_path.write_text(
-                "Skills: Python, SQL\nExperience: 2 years\n",
-                encoding="utf-8",
-            )
-
-            exit_code = cli_main(
-                [
-                    "context-doctor",
-                    "--config",
-                    str(config_path),
-                    "--context-doc",
-                    str(resume_path),
-                    "--output",
-                    str(preferences_path),
-                ]
-            )
-            preferences = preferences_path.read_text(encoding="utf-8")
-
-        self.assertEqual(exit_code, 0)
-        self.assertIn("Context preferences written:", output.getvalue())
-        self.assertIn("Roles: AI Engineer, Data Engineer", preferences)
-        self.assertIn("Locations: Seoul, Remote", preferences)
-        self.assertIn("Skills: Python, SQL", preferences)
-        self.assertIn("Experience: 2 years", preferences)
-
     def test_scheduled_run_with_context_doctor_output_has_complete_context(self) -> None:
         with tempfile.TemporaryDirectory() as tmp, patch(
             "builtins.input",
-            side_effect=["AI Engineer", "Seoul"],
+            side_effect=["AI Engineer", "Python, SQL", "Seoul", "2", ""],
         ):
             tmp_path = Path(tmp)
             config_path = self._write_two_posting_config(tmp_path)

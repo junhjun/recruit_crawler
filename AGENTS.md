@@ -37,6 +37,15 @@
 
 `status-report --brief`는 최종 판단이 아니라 토큰 절약용 1차 라우터다. `recommended_next`가 policy/no-op 성격이면 바로 구현하지 말고 다음 actionable TODO나 사용자의 현재 요청을 우선한다.
 
+## Live 실행 하네스
+
+`live-run`, `scheduled-run`처럼 실제 외부 채용 source나 browser automation을 쓰는 시연·검증 요청은 sandbox 안에서 먼저 실행하지 않는다. Codex 기본 sandbox는 외부 DNS/network가 막혀 있으므로, live source 수집을 확인해야 하는 명령은 처음부터 `sandbox_permissions="require_escalated"`로 실행해 network/browser access 승인을 요청한다.
+
+- 적용 대상: `recruit_crawler.cli live-run`, `recruit_crawler.cli scheduled-run`, live source를 여는 browser automation 검증
+- 비적용 대상: `status-report --brief`, `status-report --check`, fixture 기반 `dry-run`, unittest, `source-status`의 registry-only 확인
+- live 시연 산출물은 사용자가 명시하지 않으면 `/tmp/recruit-crawler-*` 아래에 쓴다. repo 안의 `reports/`, `artifacts/`, `personal_info/recruit.sqlite3`는 사용자가 요청한 경우에만 갱신한다.
+- sandbox에서 같은 live 명령을 먼저 실행해 DNS 실패를 만든 뒤 재실행하지 않는다. sandbox 실패가 필요한 검증은 network preflight/fail-fast 테스트를 명시적으로 요청받았을 때만 한다.
+
 ## 변경 완료 게이트
 
 기능 추가, 삭제, 상태 변경이 있으면 다음 순서로 닫는다.

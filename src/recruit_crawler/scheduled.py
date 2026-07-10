@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import json
+import socket
 from dataclasses import dataclass, replace
 from datetime import date
 from pathlib import Path
 from typing import Optional
 
 from ._scheduled_contract import (
+    GateFinding,
     ScheduledQualityGate,
+    SourcePolicyRow,
     scheduled_preflight_gate,
     scheduled_quality_gate,
     scheduled_run_identity,
@@ -63,6 +66,46 @@ class ScheduledRunResult:
         return tuple(lines)
 
 
+def _resolve_domain(domain: str) -> None:
+    socket.getaddrinfo(domain, 443)
+
+
+def _scheduled_network_findings(
+    config: AppConfig,
+    source_policy: list[SourcePolicyRow],
+) -> list[GateFinding]:
+    run_source_ids = {
+        str(row["source_id"])
+        for row in source_policy
+        if row["scheduled_action"] == "run"
+    }
+    findings: list[GateFinding] = []
+    checked_domains: set[str] = set()
+    for source in config.sources:
+        if source.source_id not in run_source_ids or source.access_mode == "fixture":
+            continue
+        for domain in source.domains:
+            if domain in checked_domains:
+                continue
+            checked_domains.add(domain)
+            try:
+                _resolve_domain(domain)
+            except OSError as exc:
+                findings.append(
+                    {
+                        "severity": "fail",
+                        "source_id": source.source_id,
+                        "message": (
+                            "scheduled-run network preflight failed before source collection: "
+                            f"{domain}: {exc}. External DNS/network access is required; "
+                            "in Codex sandbox, rerun this command with network approval."
+                        ),
+                    }
+                )
+                return findings
+    return findings
+
+
 def run_scheduled_job(request: ScheduledRunRequest) -> ScheduledRunResult:
     config = request.config
     if request.output_dir:
@@ -70,15 +113,20 @@ def run_scheduled_job(request: ScheduledRunRequest) -> ScheduledRunResult:
 
     missing_fields = missing_context_fields(config.user_context)
     source_policy, policy_findings = scheduled_source_policy(config)
+    network_findings = (
+        []
+        if missing_fields or policy_findings
+        else _scheduled_network_findings(config, source_policy)
+    )
     run_identity = scheduled_run_identity(config, request.run_date)
 
-    if missing_fields or policy_findings:
+    if missing_fields or policy_findings or network_findings:
         gate = scheduled_quality_gate(
             scheduled_preflight_gate(request.run_date),
             missing_fields,
             request.db_path,
             source_policy,
-            policy_findings,
+            [*policy_findings, *network_findings],
             run_identity,
             report_generated=False,
         )
@@ -108,4 +156,3 @@ def run_scheduled_job(request: ScheduledRunRequest) -> ScheduledRunResult:
         ranked=tuple(ranked),
         quality_gate_output=request.quality_gate_output,
     )
-

@@ -3,11 +3,14 @@ from __future__ import annotations
 import re
 from dataclasses import replace
 from pathlib import Path
-from typing import Dict, Iterable, List, Sequence, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence
 
 from .schemas import Profile, UserContext
 
-_REQUIRED_FIELDS = ("desired_roles", "skills", "preferred_locations")
+if TYPE_CHECKING:
+    from .model_context import ContextExtractionCache, ContextExtractor
+
+MAX_REASONABLE_EXPERIENCE_YEARS = 20
 _PRIVATE_PATTERNS = (
     re.compile(r"PRIVATE_[A-Z0-9_]*CANARY", re.I),
     re.compile(r"RAW_[A-Z0-9_]*CANARY", re.I),
@@ -127,6 +130,7 @@ def merge_supplemental_answers(context: UserContext, answers: Dict[str, str]) ->
         "skills": list(context.skills),
         "preferred_locations": list(context.preferred_locations),
         "max_experience_years": context.max_experience_years,
+        "explicit_deal_breakers": list(context.explicit_deal_breakers),
     }
     provenance = dict(context.provenance)
     if answers.get("desired_roles"):
@@ -141,12 +145,16 @@ def merge_supplemental_answers(context: UserContext, answers: Dict[str, str]) ->
     if answers.get("max_experience_years"):
         updates["max_experience_years"] = int(answers["max_experience_years"])
         provenance["max_experience_years"] = "supplemental_interview"
+    if answers.get("explicit_deal_breakers"):
+        updates["explicit_deal_breakers"] = split_values(answers["explicit_deal_breakers"])
+        provenance["explicit_deal_breakers"] = "supplemental_interview"
     return replace(
         context,
         desired_roles=updates["desired_roles"],
         skills=updates["skills"],
         preferred_locations=updates["preferred_locations"],
         max_experience_years=updates["max_experience_years"],
+        explicit_deal_breakers=updates["explicit_deal_breakers"],
         missing_context=missing_context_fields(
             UserContext(
                 desired_roles=updates["desired_roles"],
@@ -164,6 +172,17 @@ def parse_context_document(path: Path) -> UserContext:
     _reject_private_text(text)
     context = _context_from_text(text)
     return replace(context, missing_context=missing_context_fields(context))
+
+
+def parse_context_document_with_extractor(
+    path: Path,
+    extractor: "ContextExtractor",
+    *,
+    cache: Optional["ContextExtractionCache"] = None,
+) -> UserContext:
+    from .model_context import parse_context_document_with_extractor as parse_with_extractor
+
+    return parse_with_extractor(path, extractor, cache=cache)
 
 
 def _read_document_text(path: Path) -> str:
@@ -244,7 +263,8 @@ def _section_values(text: str) -> Dict[str, List[str]]:
         normalized_key = key.strip().lower()
         for field, names in aliases.items():
             if normalized_key in names:
-                result[field] = [item.strip() for item in re.split(r"[,;/]", value) if item.strip()]
+                separator = r"[,;/]" if field in {"roles", "skills", "deal_breakers"} else r"[,;]"
+                result[field] = [item.strip() for item in re.split(separator, value) if item.strip()]
     return result
 
 
@@ -256,4 +276,5 @@ def _infer_keywords(text: str) -> List[str]:
 
 def _infer_max_experience(text: str) -> int:
     matches = [int(value) for value in re.findall(r"(\d+)\s*(?:years?|년)", text, flags=re.I)]
-    return max(matches) if matches else 0
+    reasonable_matches = [value for value in matches if 0 < value <= MAX_REASONABLE_EXPERIENCE_YEARS]
+    return max(reasonable_matches) if reasonable_matches else 0
