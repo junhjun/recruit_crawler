@@ -10,6 +10,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from recruit_crawler.schemas import SourceManifest
 from recruit_crawler.sources.base import build_source_adapter
 from recruit_crawler.sources.platforms import (
+    CompanyCareersAdapter,
     JobKoreaAdapter,
     JumpitAdapter,
     LinkedInAdapter,
@@ -17,12 +18,14 @@ from recruit_crawler.sources.platforms import (
     RocketPunchBrowserAutomationAdapter,
     SaraminAdapter,
     WantedAdapter,
+    known_platform_ids,
 )
 
 
 class SourceAdapterRegistryTests(unittest.TestCase):
     def test_known_platforms_use_platform_specific_adapters(self) -> None:
         expected = {
+            "company_careers": CompanyCareersAdapter,
             "jumpit": JumpitAdapter,
             "saramin": SaraminAdapter,
             "jobkorea": JobKoreaAdapter,
@@ -48,6 +51,8 @@ class SourceAdapterRegistryTests(unittest.TestCase):
             adapter = build_source_adapter(manifest, ROOT / "fixtures" / "postings.json")
 
             self.assertIsInstance(adapter, adapter_class)
+
+        self.assertEqual(known_platform_ids(), sorted(expected))
 
 
 if __name__ == "__main__":

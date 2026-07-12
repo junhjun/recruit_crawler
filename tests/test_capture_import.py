@@ -160,6 +160,32 @@ class CaptureImportTests(unittest.TestCase):
         self.assertEqual(imported.candidates, [])
         self.assertTrue(any("sensitive field" in error for error in imported.source_errors))
 
+    def test_capture_import_rejects_credential_like_posting_text(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "capture.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "source_id": "linkedin",
+                        "postings": [
+                            {
+                                "source_id": "linkedin",
+                                "source_url": "https://www.linkedin.com/jobs/view/1",
+                                "title": "Data Engineer",
+                                "company": "Example",
+                                "requirements": "Use Authorization: Bearer PRIVATE_CAPTURE_TOKEN",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            imported = import_capture_files([path])
+
+        self.assertEqual(imported.candidates, [])
+        self.assertTrue(any("credential-like value" in error for error in imported.source_errors))
+
     def test_saramin_image_only_capture_is_marked_for_manual_ocr_review(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

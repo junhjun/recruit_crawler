@@ -8,7 +8,7 @@
 
 - 사람 개입 없는 `no_human` 경로만 target completion으로 인정합니다.
 - `target_lane`은 `public_http`, `browser_automation`, `null`만 사용합니다.
-- 인증·partner API, manual export, user-operated Chrome extension/browser-use, OCR, 수동 검토 결과는 enabled target 근거가 아닙니다. source review를 통과한 공개·무인증 API는 `public_http` target 경로로 사용할 수 있습니다.
+- API/partner payload, manual export, user-operated Chrome extension/browser-use, OCR, 수동 검토 결과는 enabled target 근거가 아닙니다.
 - Source notice/policy gate는 기본적으로 target enable 조건입니다. 단, 사용자가 명시적으로 정책 차단을 무시하라고 지시한 경우 harness는 `policy_override_mode: user_directed_ignore`를 가진 `browser_automation` target만 예외적으로 허용합니다. 이 override는 `policy_override_reason`과 `policy_override_acknowledges_source_notice: true`가 모두 있어야 하며, `public_http`나 API/manual/user-operated/OCR 경로에는 적용되지 않습니다.
 - `PublicJobsHttpAdapter` 공통 동작:
   - `domains` allowlist 밖 URL은 거부합니다.
@@ -59,7 +59,7 @@
 - Lane/status: `enabled / public_http`
 - 검색/상세 경로:
   - `search_urls`의 공개 검색/목록 HTML에서 `/wd/...` detail anchor 또는 Next data의 position id를 찾습니다.
-  - 검색 HTML이 skeleton만 반환하면 review된 공개 `/api/chaos/search/v1/position` endpoint에서 position id를 찾습니다. 이 endpoint는 인증·세션·개인 profile 없이 detail URL discovery에만 사용합니다.
+  - 검색 HTML이 skeleton만 반환하면 `api_url` 또는 기본 공개 `/api/chaos/search/v1/position` endpoint에서 position id를 찾습니다.
   - `search_urls`/`start_urls`가 없을 때만 직접 지정된 `detail_urls`를 fallback seed로 사용합니다.
   - no-human browser automation 검증 증거는 유지하지만 target parser는 auth/session/private profile 없이 public HTTP만 사용합니다.
 - 상세 parser:

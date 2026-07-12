@@ -17,14 +17,14 @@ _PREFERENCE_PROMPTS = {
 }
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ContextDoctorRequest:
     config: AppConfig
     context_docs: Sequence[Path]
     output: Path
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ContextDoctorResult:
     output: Path
     missing_before: List[str]

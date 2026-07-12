@@ -22,7 +22,7 @@ from .storage import persist_scheduled_run
 from .user_context import missing_context_fields
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ScheduledRunRequest:
     config: AppConfig
     run_date: date
@@ -31,7 +31,7 @@ class ScheduledRunRequest:
     db_path: Optional[Path] = None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ScheduledRunResult:
     exit_code: int
     gate: ScheduledQualityGate

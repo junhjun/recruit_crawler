@@ -11,6 +11,7 @@ from .user_context import _reject_private_text
 class FeedbackRecord(TypedDict):
     event_id: str
     recommendation_id: str
+    run_id: str
     posting_key: str
     source_id: str
     source_url: str
@@ -19,6 +20,11 @@ class FeedbackRecord(TypedDict):
     reason: str
     movement: str
     created_at: str
+
+
+class UnknownRecommendationError(ValueError):
+    def __init__(self, recommendation_id: str) -> None:
+        super().__init__(f"unknown recommendation_id: {recommendation_id}")
 
 
 def add_feedback_event(
@@ -42,7 +48,7 @@ def add_feedback_event(
             (recommendation_id,),
         ).fetchone()
         if row is None:
-            raise ValueError(f"unknown recommendation_id: {recommendation_id}")
+            raise UnknownRecommendationError(recommendation_id)
         posting_key = _posting_key(row["source_id"], row["source_url"], row["source_posting_id"])
         event_id = _feedback_event_id(recommendation_id, verdict, reason, movement, created)
         connection.execute(

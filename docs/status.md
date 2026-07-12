@@ -1,6 +1,6 @@
 # Recruit Crawler Status
 
-상태일: 2026-07-10
+상태일: 2026-07-12
 
 ## 제품 한 줄 정의
 
@@ -8,7 +8,7 @@ Codex 예약됨에 등록하도록 설계된 local-first recruiting report servi
 
 ## 기능 구현 현황
 
-총 21개 기능 — deferred: 1, done: 15, excluded: 2, partial: 3
+총 21개 기능 — deferred: 1, done: 16, excluded: 2, partial: 2
 
 | 기능 | 상태 | 범주 | 사용자 가치 | 진입점 | 검증 |
 | --- | --- | --- | --- | --- | --- |
@@ -21,8 +21,8 @@ Codex 예약됨에 등록하도록 설계된 local-first recruiting report servi
 | JD parsing | `done` | scoring | 공고 후보를 title/company/location/deadline/requirements/responsibilities 등 구조화된 snapshot으로 변환한다. | `internal parse_candidates` | `test_unknown_deadline_is_uncertain_not_expired`<br />`test_each_selected_posting_has_actionable_report_fields` |
 | Scoring and ranking | `done` | scoring | 사용자 context와 JD를 비교해 apply/hold/low_priority/exclude 추천을 산출한다. | `internal rank_snapshots` | `test_recommendation_buckets_include_apply_hold_and_low_priority`<br />`test_live_run_allows_two_years_and_filters_above_profile_limit`<br />+1 |
 | Korean Markdown report | `done` | reporting | 랭킹 결과를 한국어 Markdown 리포트로 저장하고 raw/private marker를 노출하지 않는다. | `--print-report`<br />`reports/*.md` | `test_report_surface_text_is_korean`<br />`test_report_excludes_raw_jd_and_private_profile_canaries` |
-| Context document import | `partial` | user_context | 기본 CLI는 deterministic import를 유지하고, app host가 ContextExtractionRuntime을 주입하면 disposable Codex thread로 구조화한 뒤 실패 시 deterministic context로 안전하게 복구한다. | `--context-doc` | `test_plaintext_context_imports_user_context`<br />`test_dry_run_context_doc_cli_merges_multiple_personal_inputs`<br />+18 |
-| Supplemental context interview | `done` | user_context | interactive dry-run, 명시적으로 요청한 terminal live-run, 또는 context-doctor에서 필수 필드 부족분만 CLI 질문으로 보강한다. | `live-run --interview-missing-context`<br />`recruit-crawler context-doctor` | `test_context_doc_cli_interviews_for_missing_context`<br />`test_live_run_interview_flag_fills_missing_context`<br />+1 |
+| Context document import | `done` | user_context | app host가 주입한 disposable Codex thread로 이력서/포트폴리오/선호조건을 구조화하고 실패 시 deterministic context로 안전하게 복구한다. | `--context-doc` | `test_plaintext_context_imports_user_context`<br />`test_dry_run_context_doc_cli_merges_multiple_personal_inputs`<br />+16 |
+| Supplemental context interview | `done` | user_context | 명시적으로 요청한 terminal live-run이나 context-doctor에서 필수 필드 부족분만 CLI 질문으로 보강한다. | `live-run --interview-missing-context`<br />`recruit-crawler context-doctor` | `test_context_doc_cli_interviews_for_missing_context`<br />`test_live_run_interview_flag_fills_missing_context`<br />+1 |
 | Context doctor preferences file | `done` | user_context | 역할·기술·근무지·경력·제외조건을 명시적으로 질문해 지속 사용 가능한 personal_info/preferences.md를 만든다. | `recruit-crawler context-doctor` | `test_context_doctor_writes_only_interview_preferences_and_preserves_korean_locations`<br />`test_scheduled_run_with_context_doctor_output_has_complete_context` |
 | Privacy and persisted-field boundaries | `done` | privacy | private canary, raw JD marker, auth/session/private target 정보를 저장하거나 리포트하지 않도록 차단한다. | `config allowed_persisted_fields`<br />`browser-evidence`<br />`capture-import` | `test_private_canary_document_fails_closed`<br />`test_capture_import_rejects_sensitive_posting_fields`<br />+1 |
 | Live-run quality gate | `done` | quality_gate | context 부족, enabled source zero-candidate, source 오류를 JSON gate로 실패/경고 표면화한다. | `live-run --quality-gate-output` | `test_live_run_missing_context_is_noninteractive_quality_failure`<br />`test_live_run_quality_gate_fails_enabled_source_with_zero_candidates`<br />+1 |
@@ -57,7 +57,6 @@ Codex 예약됨에 등록하도록 설계된 local-first recruiting report servi
 | --- | --- | --- | --- |
 | Company careers collection | `excluded` | Near-term service goal prioritizes Codex scheduled usage over company-careers expansion; Company careers require separate source-specific future review | Park with LinkedIn-like non-target sources; revisit only after scheduled service, persistence, feedback, and customization are stable. |
 | LinkedIn automatic collection | `excluded` | V1 target에서 제외; auth/session/privacy risk; direct scraping/API/partner payload excluded | Do not include in V1 automatic collection. |
-| Context document import | `partial` | Codex app host composition must implement CodexThreadRunner and inject ContextExtractionRuntime; the repository CLI intentionally remains deterministic by default. | App host create/read/archive lifecycle, timeout, retention, and privacy-safe operational logging policy를 별도 integration layer로 확정합니다. |
 | Chrome extension capture/import fallback | `partial` | manual/user-operated capture is fallback evidence, not target completion evidence | Keep as historical/manual fallback and regression fixture path; do not count as target enablement. |
 | Persistent DB/history | `partial` | History query surface is minimal and does not yet expose recommendation-change analysis | Expand history queries after customization and packaging stabilize. |
 | Codex scheduled onboarding and packaging | `deferred` | Web UI/service mode is outside the current scheduled-run CLI product scope; Source-health maintenance, persistence/history, feedback ingestion, and customization gates must stabilize first | Defer web UI/service mode until the scheduled runner, persistence, feedback ingestion, customization, and source health gates are stable. |
@@ -68,7 +67,6 @@ Codex 예약됨에 등록하도록 설계된 local-first recruiting report servi
 
 - **Company careers collection**: Park with LinkedIn-like non-target sources; revisit only after scheduled service, persistence, feedback, and customization are stable.
 - **LinkedIn automatic collection**: Do not include in V1 automatic collection.
-- **Context document import**: App host create/read/archive lifecycle, timeout, retention, and privacy-safe operational logging policy를 별도 integration layer로 확정합니다.
 - **Chrome extension capture/import fallback**: Keep as historical/manual fallback and regression fixture path; do not count as target enablement.
 - **Persistent DB/history**: Expand history queries after customization and packaging stabilize.
 - **Codex scheduled onboarding and packaging**: Defer web UI/service mode until the scheduled runner, persistence, feedback ingestion, customization, and source health gates are stable.

@@ -35,13 +35,18 @@ class SourceRow(TypedDict, total=False):
     test_refs: list[str]
 
 
-@dataclass(frozen=True)
+class FeatureLedgerShapeError(TypeError):
+    def __init__(self) -> None:
+        super().__init__("feature ledger was not loaded through load_feature_ledger")
+
+
+@dataclass(frozen=True, slots=True)
 class StatusReportCheck:
     ok: bool
     message: str
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ProgressBrief:
     lines: tuple[str, ...]
 
@@ -53,11 +58,11 @@ class ProgressBrief:
 def feature_records(feature_ledger: FeatureLedger) -> list[FeatureRecord]:
     features = feature_ledger["features"]
     if not isinstance(features, list):
-        raise TypeError("feature ledger was not loaded through load_feature_ledger")
+        raise FeatureLedgerShapeError()
     records: list[FeatureRecord] = []
     for feature in features:
         if not isinstance(feature, dict):
-            raise TypeError("feature ledger was not loaded through load_feature_ledger")
+            raise FeatureLedgerShapeError()
         records.append(feature)
     return records
 

@@ -16,10 +16,11 @@ from recruit_crawler.storage import (
     export_recommendations,
     export_runs,
     persist_scheduled_run,
+    StorageGate,
 )
 
 
-def _gate(*, status: str = "pass", report_generated: bool = True) -> dict:
+def _gate(*, status: str = "pass", report_generated: bool = True) -> StorageGate:
     return {
         "schema_version": 1,
         "command_mode": "scheduled-run",

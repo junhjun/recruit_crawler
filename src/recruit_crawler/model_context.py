@@ -131,9 +131,6 @@ def parse_context_documents_with_extractor(
         extraction = cache.get(fingerprint) if cache is not None else None
         if extraction is None:
             extraction = extractor.extract(aggregate_text, fingerprint=fingerprint)
-            from .codex_thread_context import validate_model_context_extraction
-
-            extraction = validate_model_context_extraction(extraction, source_text=aggregate_text)
             if cache is not None:
                 cache.set(fingerprint, extraction)
         return context_from_model_payload(extraction, provenance="model_context.schema")

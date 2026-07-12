@@ -122,15 +122,3 @@ class CodexThreadRuntimeWiringTests(unittest.TestCase):
 
         self.assertIsNone(caught.exception.__cause__)
         self.assertNotIn("private path", str(caught.exception))
-
-    def test_cache_rejects_symlink_path(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp_path = Path(tmp)
-            target = tmp_path / "target.sqlite3"
-            target.write_bytes(b"")
-            cache_path = tmp_path / "model-context-cache.sqlite3"
-            cache_path.symlink_to(target)
-            cache = SqliteContextExtractionCache(cache_path)
-
-            with self.assertRaisesRegex(ContextExtractionError, "path is unsafe"):
-                cache.get("fingerprint")

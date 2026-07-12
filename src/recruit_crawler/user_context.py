@@ -11,11 +11,6 @@ if TYPE_CHECKING:
     from .model_context import ContextExtractionCache, ContextExtractor
 
 MAX_REASONABLE_EXPERIENCE_YEARS = 20
-_PRIVATE_PATTERNS = (
-    re.compile(r"PRIVATE_[A-Z0-9_]*CANARY", re.I),
-    re.compile(r"RAW_[A-Z0-9_]*CANARY", re.I),
-    re.compile(r"Ignore previous instructions", re.I),
-)
 
 
 class UserContextImportError(ValueError):
@@ -143,7 +138,9 @@ def merge_supplemental_answers(context: UserContext, answers: Dict[str, str]) ->
         updates["preferred_locations"] = split_values(answers["preferred_locations"])
         provenance["preferred_locations"] = "supplemental_interview"
     if answers.get("max_experience_years"):
-        updates["max_experience_years"] = int(answers["max_experience_years"])
+        updates["max_experience_years"] = _parse_supplemental_experience_years(
+            answers["max_experience_years"]
+        )
         provenance["max_experience_years"] = "supplemental_interview"
     if answers.get("explicit_deal_breakers"):
         updates["explicit_deal_breakers"] = split_values(answers["explicit_deal_breakers"])
@@ -167,11 +164,16 @@ def merge_supplemental_answers(context: UserContext, answers: Dict[str, str]) ->
     )
 
 
-def parse_context_document(path: Path) -> UserContext:
-    text = _read_document_text(path)
-    _reject_private_text(text)
-    context = _context_from_text(text)
-    return replace(context, missing_context=missing_context_fields(context))
+def _parse_supplemental_experience_years(value: str) -> int:
+    try:
+        years = int(value)
+    except ValueError as exc:
+        raise UserContextImportError("maximum experience must be a whole number") from exc
+    if not 0 < years <= MAX_REASONABLE_EXPERIENCE_YEARS:
+        raise UserContextImportError(
+            f"maximum experience must be between 1 and {MAX_REASONABLE_EXPERIENCE_YEARS}"
+        )
+    return years
 
 
 def parse_context_document_with_extractor(
@@ -185,96 +187,4 @@ def parse_context_document_with_extractor(
     return parse_with_extractor(path, extractor, cache=cache)
 
 
-def _read_document_text(path: Path) -> str:
-    suffix = path.suffix.lower()
-    if suffix in {".txt", ".md"}:
-        return path.read_text(encoding="utf-8")
-    if suffix == ".pdf":
-        try:
-            from pypdf import PdfReader
-        except Exception as exc:  # pragma: no cover - dependency import guard
-            raise UserContextImportError("pypdf is required for PDF context import") from exc
-        try:
-            reader = PdfReader(str(path))
-            if reader.is_encrypted:
-                raise UserContextImportError("encrypted PDF context documents are not supported")
-            text = "\n".join(page.extract_text() or "" for page in reader.pages)
-        except UserContextImportError:
-            raise
-        except Exception as exc:
-            raise UserContextImportError("PDF context document could not be parsed") from exc
-        if not text.strip():
-            raise UserContextImportError("PDF context document did not contain extractable text")
-        return text
-    if suffix == ".docx":
-        try:
-            from docx import Document
-        except Exception as exc:  # pragma: no cover - dependency import guard
-            raise UserContextImportError("python-docx is required for DOCX context import") from exc
-        try:
-            doc = Document(str(path))
-            text = "\n".join(paragraph.text for paragraph in doc.paragraphs)
-        except Exception as exc:
-            raise UserContextImportError("DOCX context document could not be parsed") from exc
-        if not text.strip():
-            raise UserContextImportError("DOCX context document did not contain extractable text")
-        return text
-    raise UserContextImportError(f"unsupported context document type: {suffix or '<none>'}")
-
-
-def _reject_private_text(text: str) -> None:
-    for pattern in _PRIVATE_PATTERNS:
-        if pattern.search(text):
-            raise UserContextImportError("context document contains private canary text")
-
-
-def _context_from_text(text: str) -> UserContext:
-    sections = _section_values(text)
-    skills = sections.get("skills", []) or _infer_keywords(text)
-    context = UserContext(
-        desired_roles=sections.get("roles", []),
-        skills=skills,
-        preferred_locations=sections.get("locations", []),
-        max_experience_years=_infer_max_experience(text),
-        explicit_deal_breakers=sections.get("deal_breakers", []),
-        provenance={
-            "desired_roles": "document.roles",
-            "skills": "document.skills",
-            "preferred_locations": "document.locations",
-            "max_experience_years": "document.experience",
-            "explicit_deal_breakers": "document.deal_breakers",
-        },
-    )
-    return context
-
-
-def _section_values(text: str) -> Dict[str, List[str]]:
-    aliases = {
-        "roles": ("roles", "desired roles", "직무", "희망 직무"),
-        "skills": ("skills", "기술", "스킬"),
-        "locations": ("locations", "preferred locations", "근무지", "선호 근무지"),
-        "deal_breakers": ("deal breakers", "exclusions", "제외", "딜브레이커"),
-    }
-    result: Dict[str, List[str]] = {}
-    for line in text.splitlines():
-        if ":" not in line:
-            continue
-        key, value = line.split(":", 1)
-        normalized_key = key.strip().lower()
-        for field, names in aliases.items():
-            if normalized_key in names:
-                separator = r"[,;/]" if field in {"roles", "skills", "deal_breakers"} else r"[,;]"
-                result[field] = [item.strip() for item in re.split(separator, value) if item.strip()]
-    return result
-
-
-def _infer_keywords(text: str) -> List[str]:
-    known = ["Python", "Machine Learning", "ML", "LLM", "Django", "FastAPI", "SQL", "Data", "검색", "추천"]
-    lowered = text.lower()
-    return [keyword for keyword in known if keyword.lower() in lowered]
-
-
-def _infer_max_experience(text: str) -> int:
-    matches = [int(value) for value in re.findall(r"(\d+)\s*(?:years?|년)", text, flags=re.I)]
-    reasonable_matches = [value for value in matches if 0 < value <= MAX_REASONABLE_EXPERIENCE_YEARS]
-    return max(reasonable_matches) if reasonable_matches else 0
+from .user_context_documents import _context_from_text, _read_document_text, _reject_private_text, parse_context_document

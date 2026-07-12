@@ -6,13 +6,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Thresholds:
     apply: int = 75
     hold: int = 50
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ScoringWeights:
     required: int = 45
     preferred: int = 20
@@ -21,7 +21,7 @@ class ScoringWeights:
     location: int = 10
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Profile:
     desired_roles: List[str]
     skills: List[str]
@@ -30,7 +30,7 @@ class Profile:
     exclusions: List[str] = field(default_factory=list)
     private_canaries: List[str] = field(default_factory=list)
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class UserContext:
     desired_roles: List[str]
     skills: List[str]
@@ -42,7 +42,7 @@ class UserContext:
     private_canaries: List[str] = field(default_factory=list)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class FeedbackEvent:
     posting_id: str
     verdict: str
@@ -51,7 +51,7 @@ class FeedbackEvent:
     movement: str = "same"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class RelevanceCase:
     case_id: str
     user_context: UserContext
@@ -61,7 +61,7 @@ class RelevanceCase:
     rationale: str = ""
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class SourceManifest:
     source_id: str
     enabled: bool
@@ -89,7 +89,7 @@ class SourceManifest:
     options: Dict[str, Any] = field(default_factory=dict)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class AppConfig:
     top_n: int
     output_dir: Path
@@ -102,7 +102,7 @@ class AppConfig:
     sources: List[SourceManifest]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class PostingCandidate:
     source_id: str
     source_url: str
@@ -115,7 +115,7 @@ class PostingCandidate:
     raw_jd: Dict[str, Any]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class JDSnapshot:
     source_id: str
     source_url: str
@@ -134,7 +134,7 @@ class JDSnapshot:
     manual_review_flags: List[str] = field(default_factory=list)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class FitAssessment:
     snapshot: JDSnapshot
     score: int
@@ -149,7 +149,7 @@ class FitAssessment:
     missing_context_signals: List[str] = field(default_factory=list)
     deal_breaker_hits: List[str] = field(default_factory=list)
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class SourceRunMetric:
     source_id: str
     attempted: bool
@@ -158,7 +158,7 @@ class SourceRunMetric:
     errors: List[str] = field(default_factory=list)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class RunSummary:
     run_date: date
     sources_attempted: List[str]

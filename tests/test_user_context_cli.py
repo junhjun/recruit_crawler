@@ -17,7 +17,7 @@ from recruit_crawler.cli import main as cli_main
 from recruit_crawler.config import apply_context_document, load_config
 from recruit_crawler.pipeline import run_dry_run
 from recruit_crawler.schemas import UserContext
-from recruit_crawler.user_context import merge_supplemental_answers, supplemental_questions
+from recruit_crawler.user_context import UserContextImportError, merge_supplemental_answers, supplemental_questions
 
 CONFIG = ROOT / "config" / "sample_config.json"
 
@@ -270,3 +270,9 @@ class SupplementalInterviewTests(unittest.TestCase):
         self.assertGreaterEqual(len(questions), 4)
         self.assertEqual(merged.skills, ["Python", "SQL"])
         self.assertEqual(merged.provenance["skills"], "supplemental_interview")
+
+    def test_invalid_experience_answer_is_rejected_at_the_interview_boundary(self) -> None:
+        context = UserContext(desired_roles=[], skills=[], preferred_locations=[], max_experience_years=0)
+
+        with self.assertRaisesRegex(UserContextImportError, "maximum experience"):
+            merge_supplemental_answers(context, {"max_experience_years": "999"})

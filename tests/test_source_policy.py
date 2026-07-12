@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Dict, List, TypedDict, Union
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -35,13 +36,33 @@ COMPANY_CAREERS_SOURCE_IDS = {
     "line_careers",
     "coupang_careers",
 }
+JsonScalar = Union[str, int, float, bool, None]
+JsonValue = Union[JsonScalar, List["JsonValue"], Dict[str, "JsonValue"]]
+
+
+class RawSource(TypedDict, total=False):
+    source_id: str
+    enabled: bool
+    access_mode: str
+    target_status: str
+    target_lane: str | None
+    automation_level: str
+    tos_review_status: str
+    adapter_code_path: str
+    test_refs: List[str]
+    docs_refs: List[str]
+    options: Dict[str, JsonValue]
+
+
+class RawConfig(TypedDict):
+    sources: List[RawSource]
 
 
 class SourcePolicyTests(unittest.TestCase):
-    def _live_config(self) -> dict:
+    def _live_config(self) -> RawConfig:
         return json.loads((ROOT / "config" / "live_sources.sample.json").read_text(encoding="utf-8"))
 
-    def _write_temp_config(self, raw: dict, tmp_path: Path) -> Path:
+    def _write_temp_config(self, raw: RawConfig, tmp_path: Path) -> Path:
         config_path = tmp_path / "live_sources.json"
         config_path.write_text(json.dumps(raw), encoding="utf-8")
         return config_path

@@ -8,18 +8,59 @@ import unittest
 from contextlib import redirect_stdout
 from datetime import date
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from recruit_crawler.cli import main as cli_main
-from recruit_crawler.config import load_config
+from recruit_crawler.config import ConfigError, load_config
 from recruit_crawler.pipeline import build_live_run_quality_gate, run_live_run
+from recruit_crawler.schemas import PostingCandidate
 
 CONFIG = ROOT / "config" / "sample_config.json"
 
 
+class AdapterCollectionError(RuntimeError):
+    pass
+
+
 class PipelineLiveFlowTests(unittest.TestCase):
+    def test_live_run_does_not_publish_adapter_exception_details(self) -> None:
+        class FailingAdapter:
+            def collect(self) -> list[PostingCandidate]:
+                raise AdapterCollectionError("PRIVATE_ADAPTER_FAILURE_DO_NOT_PUBLISH")
+
+        raw = json.loads(CONFIG.read_text(encoding="utf-8"))
+        raw["sources"][0]["failure_mode"] = "skip_source"
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            config_path = tmp_path / "config.json"
+            raw["output_dir"] = str(tmp_path / "reports")
+            config_path.write_text(json.dumps(raw), encoding="utf-8")
+            config = load_config(config_path, allow_real_sources=True)
+            with patch("recruit_crawler.pipeline.build_source_adapter", return_value=FailingAdapter()):
+                summary, report, _ranked = run_live_run(config, date(2026, 6, 30))
+
+        self.assertEqual(summary.source_errors, ["fixture: collection failed"])
+        self.assertNotIn("PRIVATE_ADAPTER_FAILURE_DO_NOT_PUBLISH", report)
+
+    def test_live_run_fail_run_redacts_adapter_exception_details(self) -> None:
+        class FailingAdapter:
+            def collect(self) -> list[PostingCandidate]:
+                raise AdapterCollectionError("PRIVATE_FAIL_RUN_DETAIL_DO_NOT_PUBLISH")
+
+        raw = json.loads(CONFIG.read_text(encoding="utf-8"))
+        raw["sources"][0]["failure_mode"] = "fail_run"
+        with tempfile.TemporaryDirectory() as tmp:
+            config_path = Path(tmp) / "config.json"
+            config_path.write_text(json.dumps(raw), encoding="utf-8")
+            config = load_config(config_path, allow_real_sources=True)
+            with patch("recruit_crawler.pipeline.build_source_adapter", return_value=FailingAdapter()):
+                with self.assertRaisesRegex(ConfigError, "fixture: collection failed") as caught:
+                    run_live_run(config, date(2026, 6, 30))
+
+        self.assertNotIn("PRIVATE_FAIL_RUN_DETAIL_DO_NOT_PUBLISH", str(caught.exception))
     def test_live_config_can_load_reviewed_real_sources(self) -> None:
         raw = json.loads(CONFIG.read_text(encoding="utf-8"))
         raw["sources"] = [

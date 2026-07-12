@@ -6,7 +6,7 @@ import re
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
 from urllib.parse import urlparse
 
 from .schemas import SourceManifest
@@ -35,6 +35,12 @@ _ALLOWED_TRANSCRIPT_KEYS = {
 _PRIVATE_MARKERS = ("PRIVATE_", "RAW_JD_CANARY", "Ignore previous instructions", "session=", "access_token=")
 
 
+@runtime_checkable
+class BrowserDomAdapter(Protocol):
+    def _dump_dom(self, target: str) -> str:
+        ...
+
+
 def build_browser_evidence(
     manifest: SourceManifest,
     *,
@@ -58,13 +64,13 @@ def build_browser_evidence(
         _reject_private_target(target)
         adapter = build_source_adapter(evidence_manifest, Path("fixtures/postings.json"))
         parser_class = type(adapter).__name__
-        if hasattr(adapter, "_dump_dom") and target:
-            dom = adapter._dump_dom(target)  # type: ignore[attr-defined]
+        if isinstance(adapter, BrowserDomAdapter) and target:
+            dom = adapter._dump_dom(target)
         elif fixture_html is not None:
             dom = fixture_html.read_text(encoding="utf-8")
         candidates = adapter.collect()
         errors.extend(getattr(adapter, "errors", []))
-    except Exception as exc:
+    except (OSError, SourceAccessError, UnicodeError, ValueError) as exc:
         exit_code = 1
         errors.append(_redact(str(exc)))
     privacy_findings = _privacy_findings(dom)

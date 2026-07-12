@@ -13,6 +13,8 @@ Collect public job postings, parse structured JD fields, score them against a lo
 
 Recruit Crawler is a local Python CLI for reviewing recruiting postings with less manual JD reading. The near-term product target is a daily Codex app `예약됨` command: run reviewed no-human sources, score them against user-owned personal context and filtering rules, persist feedback/history, and write Korean recommendation reports.
 
+Requires Python 3.10 or later.
+
 It focuses on:
 
 - public or no-human source collection paths;

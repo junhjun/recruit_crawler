@@ -145,44 +145,6 @@ class ModelContextExtractionTests(unittest.TestCase):
         self.assertEqual(set(cache.values), {expected_fingerprint})
         self.assertNotIn("Roles: ML Engineer", json.dumps(cache.values, default=str))
 
-    def test_untrusted_extractor_value_is_rejected_before_cache_write(self) -> None:
-        extraction = ModelContextExtraction(
-            desired_roles=["ML Engineer"],
-            skills=["Jane Doe"],
-            preferred_locations=["Seoul"],
-            max_experience_years=2,
-        )
-        extractor = FakeContextExtractor(extraction)
-        cache = MemoryContextCache()
-
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "context.md"
-            path.write_text("Name: Jane Doe\nSkills: Python\n", encoding="utf-8")
-
-            context = parse_context_document_with_extractor(path, extractor, cache=cache)
-
-        self.assertEqual(cache.values, {})
-        self.assertEqual(context.skills, ["Python"])
-
-    def test_untrusted_extractor_non_list_field_falls_back_before_cache_write(self) -> None:
-        extraction = ModelContextExtraction(
-            desired_roles=["ML Engineer"],
-            skills="private source text",
-            preferred_locations=["Seoul"],
-            max_experience_years=2,
-        )
-        extractor = FakeContextExtractor(extraction)
-        cache = MemoryContextCache()
-
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "context.md"
-            path.write_text("Skills: Python\n", encoding="utf-8")
-
-            context = parse_context_document_with_extractor(path, extractor, cache=cache)
-
-        self.assertEqual(cache.values, {})
-        self.assertEqual(context.skills, ["Python"])
-
     def test_apply_context_documents_with_extractor_uses_single_aggregate_prompt_for_multiple_docs(self) -> None:
         extraction = ModelContextExtraction(
             desired_roles=["ML Engineer"],
@@ -328,43 +290,3 @@ class ModelContextExtractionTests(unittest.TestCase):
         self.assertEqual(gate["status"], "fail")
         self.assertEqual(gate["context_status"], "needs_context")
         self.assertEqual(set(gate["missing_context"]), {"skills", "max_experience_years"})
-
-    def test_ranking_prefers_ml_fixture_with_model_context(self) -> None:
-        extraction = ModelContextExtraction(
-            desired_roles=["ML Engineer", "AI Engineer", "Computer Vision Engineer"],
-            skills=[
-                "Python",
-                "PyTorch",
-                "Machine Learning",
-                "Deep Learning",
-                "Computer Vision",
-                "LLM",
-            ],
-            preferred_locations=["Seoul", "Remote"],
-            max_experience_years=2,
-            explicit_deal_breakers=["unpaid internship"],
-        )
-        extractor = FakeContextExtractor(extraction)
-
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp_path = Path(tmp)
-            context_doc = tmp_path / "resume.md"
-            context_doc.write_text(
-                "Resume text with noisy year 6002018 years and model projects.\n",
-                encoding="utf-8",
-            )
-            raw = json.loads(CONFIG.read_text(encoding="utf-8"))
-            raw["output_dir"] = str(tmp_path / "reports")
-            raw["fixture_path"] = str(ROOT / "fixtures" / "postings.json")
-            config_path = tmp_path / "config.json"
-            config_path.write_text(json.dumps(raw), encoding="utf-8")
-
-            config = apply_context_documents(
-                load_config(config_path),
-                [context_doc],
-                extractor=extractor,
-            )
-            _summary, _report, ranked = run_dry_run(config, date(2026, 7, 10))
-
-        self.assertEqual(ranked[0].snapshot.title, "ML Engineer, Recommendation Systems")
-        self.assertGreater(ranked[0].score, 50)

@@ -122,15 +122,15 @@ def _run_pipeline(
             source_candidates = adapter.collect()
             candidates.extend(source_candidates)
             errors = [
-                f"{source.source_id}: {error}"
+                f"{source.source_id}: collection reported an error"
                 for error in getattr(adapter, "errors", [])
             ]
             source_errors.extend(errors)
-        except Exception as exc:
+        except RuntimeError:
             if source.failure_mode == "fail_run":
-                raise
+                raise ConfigError(f"{source.source_id}: collection failed") from None
 
-            errors = [f"{source.source_id}: {exc}"]
+            errors = [f"{source.source_id}: collection failed"]
             source_errors.extend(errors)
         source_metrics.append(
             SourceRunMetric(

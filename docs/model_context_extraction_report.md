@@ -111,7 +111,7 @@ GPT-5.5 수준의 모델이 문서 텍스트를 읽어 구조화한다고 가정
 | 선택 | 비용 | 품질 | 추천 용도 |
 | --- | ---: | ---: | --- |
 | deterministic only | 최저 | 낮음 | fallback, privacy fail-closed |
-| single aggregated prompt, medium effort | 낮음~중간 | 높음 | app host 연동 후 선택 가능한 scheduled run |
+| single aggregated prompt, medium effort | 낮음~중간 | 높음 | 기본 scheduled run |
 | single prompt, high effort | 중간 | 높음 | 초기 onboarding, schema drift 점검 |
 | chunked map-reduce | 높음 | 최고 가능 | 긴 포트폴리오, 품질 진단 batch |
 
@@ -134,7 +134,7 @@ Tradeoff:
 | high | 긴 포트폴리오와 연구 설명에서 더 넓은 skill/role recall을 기대할 수 있다. 과추출 noise는 deterministic merge가 제어해야 한다. | 높음 | 추론 |
 | xhigh | chunk reduce, 모순 해결, provenance 설명에는 유리할 수 있으나 매일 scheduled 기본값으로는 비용 대비 이득이 불확실하다. | 최고 | 추론 |
 
-결론적으로 app host 연동이 추가되면 **single aggregated prompt + medium effort + 엄격 JSON schema + cache**가 합리적인 선택지다. 현재 기본 CLI는 deterministic import를 유지한다. high/xhigh는 매일 실행이 아니라 초기 personal_info onboarding, 실패 분석, 또는 사용자가 수동 재추출을 요청할 때 쓰는 편이 낫다.
+결론적으로 기본값은 **single aggregated prompt + medium effort + 엄격 JSON schema + cache**가 합리적이다. high/xhigh는 매일 실행이 아니라 초기 personal_info onboarding, 실패 분석, 또는 사용자가 수동 재추출을 요청할 때 쓰는 편이 낫다.
 
 ## 이전 방식과 새 방식 비교
 
@@ -160,11 +160,11 @@ Tradeoff:
 6. 추출 결과는 `UserContext`로 변환한다.
 7. `max_experience_years`는 `1..20` 범위만 인정한다.
 8. schema version, model id, effort를 포함한 full SHA-256 fingerprint로 cache key를 만들고 raw text는 저장하지 않는다.
-9. 후속 app host가 `ContextExtractionRuntime`으로 extractor와 `SqliteContextExtractionCache`를 정상 CLI context-loading 경로에 주입한다.
+9. app host는 `ContextExtractionRuntime`으로 extractor와 `SqliteContextExtractionCache`를 정상 CLI context-loading 경로에 주입한다.
 10. structured cache는 fingerprint와 검증된 schema 결과만 권한 제한 SQLite transaction으로 저장한다.
 11. scheduled run은 context가 부족하면 기존처럼 `needs_context`로 실패한다.
 
-Python 코드가 Codex app 도구를 직접 호출할 수 없으므로, 후속 app 소유 integration layer가 `CodexThreadRunner`를 구현해야 한다. 이 경계는 Codex의 `create_thread(initial prompt)`, 완료 대기 후 final assistant JSON을 반환하는 `read_thread`, `set_thread_archived(true)` 의미에 맞춰져 있으며 OpenAI API key나 `openai` SDK를 사용하지 않는다. host 구현 전까지 기본 CLI는 deterministic import를 사용한다. repo unit test는 live model에 의존하지 않고 fake runner로 동일 lifecycle과 CLI context-loading hook을 검증한다.
+Python 코드가 Codex app 도구를 직접 호출할 수 없으므로 app 소유 integration layer가 `CodexThreadRunner`를 구현한다. 이 경계는 Codex의 `create_thread(initial prompt)`, 완료 대기 후 final assistant JSON을 반환하는 `read_thread`, `set_thread_archived(true)` 의미에 맞춰져 있으며 OpenAI API key나 `openai` SDK를 사용하지 않는다. app host는 이 runner로 만든 extractor와 persistent structured cache를 `ContextExtractionRuntime`으로 `load_config_with_context()`에 주입한다. repo unit test는 live model에 의존하지 않고 동일 lifecycle과 CLI context-loading hook을 fake runner로 검증한다.
 
 ## 리팩토링 계획
 
@@ -212,10 +212,10 @@ PYTHONPATH=src python3 -m recruit_crawler.cli live-run --config /tmp/recruit-cra
 
 - Codex thread/model context focused tests: 30 tests passed.
 - context/scheduled focused regression: 54 tests passed, 1 skipped.
-- full unittest suite: 156 tests passed, 1 skipped.
-- synthetic runner QA: synthetic non-personal context를 initial prompt 하나로 보낸 fake disposable thread가 strict JSON을 반환했고, 응답을 읽은 직후 archive lifecycle을 기록했다. 실제 Codex app host 주입은 아직 구현되지 않았다.
+- full unittest suite: 151 tests passed, 1 skipped.
+- Codex app manual QA: synthetic context를 initial prompt 하나로 보낸 disposable thread가 strict JSON을 반환했고, 응답을 읽은 직후 thread를 archive했다.
 - dry-run manual QA: `ML Engineer, Recommendation Systems`가 `70점 hold`로 1순위.
-- live-run QA: enabled source 6개에서 후보 84개를 수집했고 quality gate는 `pass`, context status는 `complete`.
+- live-run QA: enabled source 6개에서 후보 86개를 수집했고 quality gate는 `pass`, context status는 `complete`.
 
 ## 남은 일
 

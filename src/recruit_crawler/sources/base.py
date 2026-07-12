@@ -6,6 +6,10 @@ from typing import List, Protocol
 from ..schemas import PostingCandidate, SourceManifest
 
 
+class SourceAdapterConfigurationError(ValueError):
+    pass
+
+
 class SourceAdapter(Protocol):
     manifest: SourceManifest
 
@@ -16,7 +20,9 @@ class SourceAdapter(Protocol):
 class LocalJsonSourceAdapter:
     def __init__(self, manifest: SourceManifest, path: Path):
         if manifest.access_mode not in {"fixture", "manual"}:
-            raise ValueError(f"unsupported local source access mode: {manifest.access_mode}")
+            raise SourceAdapterConfigurationError(
+                f"unsupported local source access mode: {manifest.access_mode}"
+            )
         self.manifest = manifest
         self.path = path
 
@@ -39,4 +45,4 @@ def build_source_adapter(manifest: SourceManifest, fixture_path: Path) -> Source
         from .http import PublicJobsHttpAdapter
 
         return PublicJobsHttpAdapter(manifest)
-    raise ValueError(f"unsupported source access mode: {manifest.access_mode}")
+    raise SourceAdapterConfigurationError(f"unsupported source access mode: {manifest.access_mode}")

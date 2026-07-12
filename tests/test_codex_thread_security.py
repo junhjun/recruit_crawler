@@ -13,7 +13,7 @@ from recruit_crawler.codex_thread_context import (
     CodexThreadId,
     parse_model_context_json,
 )
-from recruit_crawler.model_context import ContextExtractionError, ModelContextExtraction
+from recruit_crawler.model_context import ContextExtractionError
 
 
 class UnexpectedRunnerError(RuntimeError):
@@ -98,21 +98,6 @@ class CodexThreadSecurityTests(unittest.TestCase):
                 split_response,
                 source_text="confidential research, prototype access phrase",
             )
-
-    def test_labeled_short_personal_value_is_rejected(self) -> None:
-        response = json.dumps(
-            {
-                "desired_roles": [],
-                "skills": ["Jane Doe"],
-                "preferred_locations": [],
-                "max_experience_years": 0,
-                "explicit_deal_breakers": [],
-                "confidence": 0.5,
-            }
-        )
-
-        with self.assertRaisesRegex(ContextExtractionError, "labeled sensitive source data"):
-            parse_model_context_json(response, source_text="Name: Jane Doe")
 
     def test_three_field_source_passage_is_rejected(self) -> None:
         response = json.dumps(

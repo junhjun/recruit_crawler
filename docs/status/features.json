@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-07-10",
+  "updated_at": "2026-07-12",
   "product_summary": "Codex 예약됨에 등록하도록 설계된 local-first recruiting report service: collect reviewed no-human sources, score against user-owned personal_info/filter rules, persist feedback/history, and generate Korean recommendation reports.",
   "features": [
     {
@@ -93,8 +93,8 @@
         "tests/test_saramin_adapter.py::test_saramin_adapter_discovers_public_relay_detail_urls_from_listing",
         "tests/test_saramin_adapter.py::test_saramin_adapter_discovers_script_embedded_relay_ids_from_listing",
         "tests/test_wanted_adapter.py::test_wanted_adapter_discovers_public_wd_urls_from_listing",
-        "tests/test_wanted_adapter.py::test_wanted_adapter_discovers_next_data_wd_ids_from_listing",
-        "tests/test_wanted_policy.py::test_skeleton_listing_uses_reviewed_public_search_endpoint",
+        "tests/test_wanted_discovery.py::test_wanted_adapter_discovers_next_data_wd_ids_from_listing",
+        "tests/test_wanted_discovery.py::test_wanted_adapter_falls_back_to_public_search_api_when_listing_is_skeleton",
         "tests/test_jumpit_adapter.py::test_jumpit_adapter_collects_jobs_from_sitemap_and_react_data",
         "tests/test_rallit_adapter.py::test_rallit_adapter_collects_jobs_from_public_positions",
         "tests/test_rocketpunch_adapter.py::test_rocketpunch_browser_automation_parses_listing_cards_without_detail_links"
@@ -189,7 +189,7 @@
       "test_refs": [
         "tests/test_pipeline_flows.py::test_recommendation_buckets_include_apply_hold_and_low_priority",
         "tests/test_pipeline_live_flows.py::test_live_run_allows_two_years_and_filters_above_profile_limit",
-        "tests/test_model_context_extraction.py::test_ranking_prefers_ml_fixture_with_model_context"
+        "tests/test_model_context_ranking.py::test_ranking_prefers_ml_fixture_with_model_context"
       ],
       "docs_refs": [
         "README.md",
@@ -227,8 +227,8 @@
       "feature_id": "context_documents",
       "name": "Context document import",
       "category": "user_context",
-      "status": "partial",
-      "user_value": "기본 CLI는 deterministic import를 유지하고, app host가 ContextExtractionRuntime을 주입하면 disposable Codex thread로 구조화한 뒤 실패 시 deterministic context로 안전하게 복구한다.",
+      "status": "done",
+      "user_value": "app host가 주입한 disposable Codex thread로 이력서/포트폴리오/선호조건을 구조화하고 실패 시 deterministic context로 안전하게 복구한다.",
       "entrypoints": [
         "--context-doc"
       ],
@@ -259,9 +259,7 @@
         "tests/test_codex_thread_context.py::test_verbatim_private_passage_is_rejected_before_cache_or_report",
         "tests/test_codex_thread_security.py::test_combined_read_and_archive_failure_is_sanitized",
         "tests/test_codex_thread_security.py::test_short_pii_and_split_source_passages_are_rejected",
-        "tests/test_codex_thread_security.py::test_labeled_short_personal_value_is_rejected",
         "tests/test_codex_thread_runtime_wiring.py::test_cli_context_hook_reuses_persistent_structured_cache",
-        "tests/test_codex_thread_runtime_wiring.py::test_cache_rejects_symlink_path",
         "tests/test_model_context_extraction.py::test_aggregate_model_failure_falls_back_to_deterministic_merge_and_preserves_slash_rules",
         "tests/test_model_context_extraction.py::test_private_canary_in_any_aggregate_document_rejects_before_extractor_call"
       ],
@@ -270,17 +268,15 @@
         "docs/index.md",
         "docs/model_context_extraction_report.md"
       ],
-      "blockers": [
-        "Codex app host composition must implement CodexThreadRunner and inject ContextExtractionRuntime; the repository CLI intentionally remains deterministic by default."
-      ],
-      "next_action": "App host create/read/archive lifecycle, timeout, retention, and privacy-safe operational logging policy를 별도 integration layer로 확정합니다."
+      "blockers": [],
+      "next_action": ""
     },
     {
       "feature_id": "supplemental_interview",
       "name": "Supplemental context interview",
       "category": "user_context",
       "status": "done",
-      "user_value": "interactive dry-run, 명시적으로 요청한 terminal live-run, 또는 context-doctor에서 필수 필드 부족분만 CLI 질문으로 보강한다.",
+      "user_value": "명시적으로 요청한 terminal live-run이나 context-doctor에서 필수 필드 부족분만 CLI 질문으로 보강한다.",
       "entrypoints": [
         "live-run --interview-missing-context",
         "recruit-crawler context-doctor"

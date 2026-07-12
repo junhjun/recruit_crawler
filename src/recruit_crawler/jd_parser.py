@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from datetime import date
-from typing import Iterable, List, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple, Union
 
 from .schemas import JDSnapshot, PostingCandidate
 
@@ -16,15 +16,18 @@ def parse_deadline(value: Optional[str]) -> Tuple[Optional[date], bool]:
         return None, True
 
 
-def _list(raw: object) -> List[str]:
-    if raw is None:
-        return []
+RawJdValue = Union[None, str, List[str]]
+
+
+def _list(raw: RawJdValue) -> List[str]:
     if isinstance(raw, list):
         return [str(item).strip() for item in raw if str(item).strip()]
-    return [str(raw).strip()] if str(raw).strip() else []
+    if isinstance(raw, str):
+        return [raw.strip()] if raw.strip() else []
+    return []
 
 
-def _minimum_experience_years(raw: object) -> Optional[int]:
+def _minimum_experience_years(raw: RawJdValue) -> Optional[int]:
     for item in _list(raw):
         if "경력무관" in item or "신입" in item:
             continue
