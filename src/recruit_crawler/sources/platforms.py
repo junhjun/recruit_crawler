@@ -9,7 +9,7 @@ from .platform_rallit import RallitAdapter
 from .platform_rocketpunch import RocketPunchBrowserAutomationAdapter
 from .platform_saramin import SaraminAdapter
 from .platform_shared import CompanyCareersAdapter
-from .platform_wanted import WantedAdapter
+from .platform_wanted import WantedAdapter, _wanted_detail_urls_from_search_api
 
 PLATFORM_ADAPTERS: Final = {
     "company_careers": CompanyCareersAdapter,

@@ -122,9 +122,12 @@ def _wanted_detail_urls_from_search_api(text: str) -> List[str]:
         if not isinstance(item, dict):
             continue
         position_id = item.get("id")
-        if position_id in (None, ""):
+        if isinstance(position_id, bool):
             continue
-        urls.append(f"https://www.wanted.co.kr/wd/{position_id}")
+        position_id_text = str(position_id)
+        if not position_id_text.isascii() or not position_id_text.isdecimal():
+            continue
+        urls.append(f"https://www.wanted.co.kr/wd/{position_id_text}")
     return list(dict.fromkeys(urls))
 
 
