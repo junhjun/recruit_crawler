@@ -11,6 +11,7 @@ import json
 from unittest.mock import patch
 
 from recruit_crawler.schemas import SourceManifest
+from recruit_crawler.report_policy import verified_link_url
 from recruit_crawler.sources.http import HttpResponse
 from recruit_crawler.sources.platforms import RallitAdapter
 
@@ -191,6 +192,79 @@ class RallitAdapterTests(unittest.TestCase):
         self.assertIn("데이터 플랫폼", candidates[0].raw_jd["responsibilities"][0])
         self.assertIn("Python API", candidates[0].raw_jd["required_qualifications"][0])
         self.assertEqual(candidates[0].deadline_raw, "2026-07-31")
+
+
+    def test_verified_rallit_links_canonicalize_unicode_slugs_and_reject_unsafe_forms(self) -> None:
+        encoded_slug = (
+            "%EC%A3%BC%EC%8B%9D%ED%9A%8C%EC%82%AC-%EC%9C%A0%EB%8B%88%EC%9C%A0%EB%8B%88-"
+            "ai-%EA%B0%9C%EB%B0%9C%EC%9E%90-%EC%B1%84%EC%9A%A9"
+        )
+        self.assertEqual(
+            verified_link_url(
+                "scheduled-run",
+                "rallit",
+                f"https://www.rallit.com/positions/1797/{encoded_slug.lower()}",
+                "1797",
+                "verified",
+            ),
+            f"https://www.rallit.com/positions/1797/{encoded_slug}",
+        )
+        self.assertEqual(
+            verified_link_url(
+                "scheduled-run",
+                "rallit",
+                "https://www.rallit.com/positions/1797/주식회사-유니유니-ai-개발자-채용",
+                "1797",
+                "verified",
+            ),
+            f"https://www.rallit.com/positions/1797/{encoded_slug}",
+        )
+        self.assertEqual(
+            verified_link_url(
+                "scheduled-run",
+                "rallit",
+                "https://www.rallit.com/positions/1797",
+                "1797",
+                "verified",
+            ),
+            "https://www.rallit.com/positions/1797",
+        )
+
+        unsafe_urls = (
+            "https://www.rallit.com/positions/1797/bad%",
+            "https://www.rallit.com/positions/1797/bad%G0",
+            "https://www.rallit.com/positions/1797/bad%2Fslug",
+            "https://www.rallit.com/positions/1797/bad/slug",
+            "https://www.rallit.com/positions/1797/bad.dot",
+            "https://www.rallit.com/positions/1797/bad%2Edot",
+            "https://www.rallit.com/positions/1797/bad\\slug",
+            "https://www.rallit.com/positions/1797/bad%5Cslug",
+            "https://www.rallit.com/positions/1797/bad%25slug",
+            "https://www.rallit.com/positions/1797/bad%00slug",
+            "https://www.rallit.com/positions/1797/bad%FFslug",
+            "https://www.rallit.com/positions/1797/e\u0301",
+            "https://www.rallit.com/positions/1797/",
+            "https://www.rallit.com/positions/1797/bad/",
+            "https://www.rallit.com/positions/1797/bad/extra",
+            "https://www.rallit.com/positions/1797/bad?query=1",
+            "https://www.rallit.com/positions/1797/bad#fragment",
+            "https://user@www.rallit.com/positions/1797/bad",
+            "https://www.rallit.com:443/positions/1797/bad",
+            "http://www.rallit.com/positions/1797/bad",
+            "https://rallit.com/positions/1797/bad",
+            "https://www.rallit.com/positions/1798/bad",
+        )
+        for source_url in unsafe_urls:
+            with self.subTest(source_url=source_url):
+                self.assertIsNone(
+                    verified_link_url(
+                        "scheduled-run",
+                        "rallit",
+                        source_url,
+                        "1797",
+                        "verified",
+                    )
+                )
 
 
 if __name__ == "__main__":

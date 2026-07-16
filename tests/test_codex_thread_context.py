@@ -19,6 +19,8 @@ from recruit_crawler.codex_thread_context import (
 from recruit_crawler.config import load_config
 from recruit_crawler.model_context import ContextExtractionError, ModelContextExtraction
 from recruit_crawler.pipeline import run_dry_run
+from recruit_crawler.projection import project_pipeline_result
+from recruit_crawler.summarizer import render_report_v2
 from recruit_crawler.user_context import parse_context_document_with_extractor
 
 CONFIG = ROOT / "config" / "sample_config.json"
@@ -196,11 +198,14 @@ class CodexThreadContextTests(unittest.TestCase):
             first = parse_context_document_with_extractor(path, extractor, cache=cache)
             second = parse_context_document_with_extractor(path, extractor, cache=cache)
             config = replace(load_config(CONFIG), user_context=first)
-            _summary, report, _ranked = run_dry_run(config, date(2026, 7, 10))
+            result = run_dry_run(config, date(2026, 7, 10))
+            projection = project_pipeline_result(result)
+            report = render_report_v2(result).markdown_bytes.decode("utf-8")
 
         self.assertEqual(first, second)
         self.assertEqual(len(runner.created_prompts), 1)
         self.assertEqual(runner.archived_thread_ids, [CodexThreadId("thread-1")])
+        self.assertNotIn("Roles: ML Engineer", json.dumps(projection, default=str))
         self.assertNotIn("Roles: ML Engineer", json.dumps(cache.values, default=str))
         self.assertNotIn("never persist this sentence", report)
 
@@ -254,9 +259,12 @@ class CodexThreadContextTests(unittest.TestCase):
 
             context = parse_context_document_with_extractor(path, extractor, cache=cache)
             config = replace(load_config(CONFIG), user_context=context)
-            _summary, report, _ranked = run_dry_run(config, date(2026, 7, 10))
+            result = run_dry_run(config, date(2026, 7, 10))
+            projection = project_pipeline_result(result)
+            report = render_report_v2(result).markdown_bytes.decode("utf-8")
 
         self.assertEqual(cache.values, {})
         self.assertNotIn(private_passage, context.skills)
         self.assertNotIn(private_passage, report)
+        self.assertNotIn(private_passage, json.dumps(projection, default=str))
         self.assertEqual(runner.archived_thread_ids, [CodexThreadId("thread-1")])

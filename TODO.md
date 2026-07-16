@@ -14,6 +14,7 @@
 
 - [ ] JobKorea JSON-LD fallback으로 수집한 공고의 상세 JD 품질을 계속 샘플링
 - [ ] Rallit/Jumpit/RocketPunch 상세 parser shape 변경 감지용 fixture를 주기적으로 갱신
+- [ ] Evaluate a Jumpit public-listing fallback only after persistent sitemap unavailability and a separate public endpoint, robots/TOS, parser, fixture, and live-evidence review
 - [ ] Source registry/docs/config/test refs 일치 여부를 release 전 체크리스트로 유지
 
 ### Phase 2 — Daily-use feedback and ranking quality

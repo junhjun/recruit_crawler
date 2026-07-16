@@ -1,21 +1,46 @@
 from __future__ import annotations
 
+import json
 import sys
+import tempfile
 import unittest
+from dataclasses import asdict
+from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-import json
-import tempfile
-from datetime import date
-
 from recruit_crawler.capture_import import import_capture_files, select_capture_files
 from recruit_crawler.config import load_config
+from recruit_crawler.gate import build_gate_v2
 from recruit_crawler.pipeline import run_capture_import
+from recruit_crawler.projection import project_pipeline_result
+from recruit_crawler.report_writer import persist_rendered_report
+from recruit_crawler.schemas import PipelineResultV2
+from recruit_crawler.summarizer import render_report_v2
 
 CONFIG = ROOT / "config" / "sample_config.json"
+
+
+def _materialize(result: PipelineResultV2, config, slug: str = "capture-import"):
+    projection = project_pipeline_result(result)
+    rendered = render_report_v2(result)
+    publication = persist_rendered_report(
+        config.output_dir,
+        result.run_date,
+        rendered,
+        report_slug=slug,
+    )
+    artifact = publication.artifact
+    report = artifact.rendered.markdown_bytes.decode("utf-8") if artifact.rendered is not None else ""
+    gate = build_gate_v2(
+        result,
+        enabled_source_ids=(source.source_id for source in config.sources if source.enabled),
+        projection=projection,
+        report_artifact=artifact,
+    )
+    return projection, report, publication, gate
 
 
 class CaptureImportTests(unittest.TestCase):
@@ -108,31 +133,43 @@ class CaptureImportTests(unittest.TestCase):
             selection = select_capture_files(tmp_path / "spool", run_date=date(2026, 6, 30))
             imported = import_capture_files(selection.files)
             config = load_config(self._write_config(tmp_path))
-            summary, report, ranked = run_capture_import(
+            result = run_capture_import(
                 config,
                 selection.run_date,
                 imported.candidates,
                 imported.sources_attempted,
                 imported.source_errors,
             )
+            projection, report, publication, gate = _materialize(result, config, "mixed-sources")
 
-        self.assertEqual(summary.candidates_collected, 3)
-        self.assertEqual(summary.duplicates_removed, 0)
-        self.assertEqual(summary.ranked_count, 3)
+        self.assertIsInstance(result, PipelineResultV2)
+        self.assertEqual(result.collected_count, 3)
+        self.assertEqual(result.duplicates_removed, 0)
+        self.assertEqual(len(projection["assessments"]), 3)
         self.assertEqual(imported.sources_attempted, ["jobkorea", "linkedin", "saramin"])
-        self.assertTrue(any("invalid JSON" in error for error in summary.source_errors))
-        self.assertTrue(any("empty postings" in error for error in summary.source_errors))
-        self.assertTrue(any("duplicate posting jobkorea:49476607" in error for error in summary.source_errors))
+        self.assertTrue(any("invalid JSON" in error for error in imported.source_errors))
+        self.assertTrue(any("empty postings" in error for error in imported.source_errors))
+        self.assertTrue(any("duplicate posting jobkorea:49476607" in error for error in imported.source_errors))
+        self.assertIsNone(publication.failure_code)
+        self.assertEqual(publication.durability, "published")
+        self.assertTrue(publication.artifact.generated)
+        self.assertTrue(gate["report"]["queue_parity"])
         self.assertIn("LinkedIn Data Engineer", report)
-        self.assertIn("AI 엔지니어 채용", report)
-        self.assertIn("[울산]Forward Deployed 엔지니어", report)
-        self.assertIn("울산광역시 남구 옥현로 129", report)
-        self.assertIn("2026-07-28", report)
+        public_titles = {item["title"] for item in projection["assessments"]}
+        self.assertIn("AI 엔지니어 채용", public_titles)
+        self.assertIn("[울산]Forward Deployed 엔지니어", public_titles)
+        self.assertTrue(
+            any(item["location"] == "울산광역시 남구 옥현로 129" for item in projection["assessments"])
+        )
+        self.assertTrue(any(item["deadline"] == "2026-07-28" for item in projection["assessments"]))
+        self.assertNotIn("AI 엔지니어 채용", report)
         self.assertNotIn("울산 남구 마감일", report)
         self.assertNotIn("SHOULD_NOT_LEAK", report)
-        self.assertIn("PyTorch", report)
-        self.assertIn("FastAPI", report)
-        self.assertEqual({item.snapshot.source_id for item in ranked}, {"linkedin", "saramin", "jobkorea"})
+        self.assertIn("필수 요건 일치", report)
+        self.assertNotIn("FastAPI", report)
+        self.assertEqual({item["source_id"] for item in projection["assessments"]}, {"linkedin", "saramin", "jobkorea"})
+        public_payload = json.dumps({"projection": projection, "artifact": asdict(publication.artifact), "gate": gate}, default=str, ensure_ascii=False)
+        self.assertNotIn("SHOULD_NOT_LEAK", public_payload)
 
     def test_capture_import_rejects_sensitive_posting_fields(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -216,17 +253,51 @@ class CaptureImportTests(unittest.TestCase):
             config_path = tmp_path / "config.json"
             config_path.write_text(json.dumps(raw), encoding="utf-8")
             config = load_config(config_path)
-            _summary, report, ranked = run_capture_import(
+            result = run_capture_import(
                 config,
                 date(2026, 6, 30),
                 imported.candidates,
                 imported.sources_attempted,
                 imported.source_errors,
             )
+            projection, report, publication, gate = _materialize(result, config, "image-only")
 
-        self.assertEqual(ranked[0].snapshot.manual_review_flags, ["본문 OCR 필요: 사람인 이미지형 JD 또는 DOM 텍스트 없음"])
-        self.assertIn("본문 OCR 필요", report)
-        self.assertIn("본문 이미지/OCR 필요 상태를 수동 검토했나요?", report)
+        self.assertEqual(len(projection["manual_queue"]), 1)
+        manual_item = projection["manual_queue"][0]
+        self.assertEqual(
+            set(manual_item),
+            {
+                "recommendation_id",
+                "posting_key",
+                "source_id",
+                "source_url",
+                "source_posting_id",
+                "title",
+                "company",
+                "location",
+                "deadline",
+                "score",
+                "final_disposition",
+                "reason_codes",
+                "source_detail_quality",
+                "matched_evidence",
+            },
+        )
+        self.assertEqual(set(manual_item["reason_codes"]), {"manual_flag"})
+        self.assertEqual(manual_item["final_disposition"], "manual_review")
+        self.assertNotIn("manual_review_flags", manual_item)
+        public_payload = json.dumps(
+            {"projection": projection, "gate": gate},
+            default=str,
+            ensure_ascii=False,
+        ) + report
+        self.assertNotIn("OCR", public_payload)
+        self.assertNotIn("manual_review_flags", public_payload)
+        self.assertNotIn("본문 OCR 필요", public_payload)
+        self.assertTrue(gate["report"]["queue_parity"])
+        self.assertIsNone(publication.failure_code)
+        self.assertEqual(publication.durability, "published")
+        self.assertTrue(publication.artifact.generated)
 
 
 if __name__ == "__main__":

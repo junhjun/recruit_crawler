@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Protocol
+from typing import Any, List, Protocol
 
-from ..schemas import PostingCandidate, SourceManifest
+from ..schemas import CandidateDetailIssueV2, PostingCandidate, SourceManifest
 
 
 class SourceAdapterConfigurationError(ValueError):
@@ -12,9 +12,15 @@ class SourceAdapterConfigurationError(ValueError):
 
 class SourceAdapter(Protocol):
     manifest: SourceManifest
+    issues: List[CandidateDetailIssueV2]
 
     def collect(self) -> List[PostingCandidate]:
         """Return normalized candidates without performing work outside the adapter."""
+
+
+def initialize_source_adapter(adapter: Any) -> None:
+    """Initialize the adapter-bound typed candidate issue transport."""
+    adapter.issues = []
 
 
 class LocalJsonSourceAdapter:
@@ -25,6 +31,7 @@ class LocalJsonSourceAdapter:
             )
         self.manifest = manifest
         self.path = path
+        initialize_source_adapter(self)
 
     def collect(self) -> List[PostingCandidate]:
         from .fixture import load_fixture_postings
@@ -40,9 +47,13 @@ def build_source_adapter(manifest: SourceManifest, fixture_path: Path) -> Source
 
         adapter_class = PLATFORM_ADAPTERS.get(manifest.source_id)
         if adapter_class:
-            return adapter_class(manifest)
+            adapter = adapter_class(manifest)
+            initialize_source_adapter(adapter)
+            return adapter
 
         from .http import PublicJobsHttpAdapter
 
-        return PublicJobsHttpAdapter(manifest)
+        adapter = PublicJobsHttpAdapter(manifest)
+        initialize_source_adapter(adapter)
+        return adapter
     raise SourceAdapterConfigurationError(f"unsupported source access mode: {manifest.access_mode}")

@@ -1,0 +1,600 @@
+{
+  "schema_version": 2,
+  "oracle_version": 1,
+  "runs": [
+    {
+      "run_id": "holdout-primary",
+      "clock": "2026-07-14T00:00:00Z",
+      "duration_ms": 0,
+      "inheritance": null,
+      "config": {
+        "top_n": 3,
+        "manual_review_n": 2,
+        "scoring_schema_version": 2,
+        "weights": {
+          "required": 40,
+          "responsibilities": 20,
+          "role": 20,
+          "preferred": 10,
+          "location": 10
+        },
+        "thresholds": {
+          "apply": 75,
+          "hold": 50
+        }
+      },
+      "context": {
+        "desired_roles": [
+          "ML Engineer"
+        ],
+        "skills": [
+          "Python",
+          "PyTorch"
+        ],
+        "preferred_locations": [
+          "Seoul"
+        ],
+        "max_experience_years": 2,
+        "education_claim": "bachelor",
+        "explicit_deal_breakers": [
+          "unpaid internship"
+        ]
+      },
+      "sources": [
+        {
+          "source_id": "fixture",
+          "source_url": "https://jobs.example.test",
+          "enabled": true,
+          "access_mode": "fixture",
+          "duration_ms": 0,
+          "allowed_persisted_fields": [
+            "source_id",
+            "source_url",
+            "source_posting_id",
+            "title",
+            "company",
+            "location",
+            "deadline",
+            "structured_snapshot"
+          ]
+        }
+      ],
+      "postings": [
+        {
+          "source_id": "fixture",
+          "source_url": "https://jobs.example.test/h01",
+          "source_posting_id": "h01",
+          "title": "H01 ML Engineer",
+          "company": "H01 Labs",
+          "location": "Seoul",
+          "deadline": "2026-12-31",
+          "structured_snapshot": {
+            "required_qualifications": [
+              "Python"
+            ],
+            "preferred_qualifications": [
+              "PyTorch"
+            ],
+            "responsibilities": [
+              "Build ML systems"
+            ],
+            "company_info": [],
+            "experience_tags": [],
+            "manual_review_flags": [],
+            "detail_quality": "verified"
+          }
+        },
+        {
+          "source_id": "fixture",
+          "source_url": "https://jobs.example.test/h02",
+          "source_posting_id": "h02",
+          "title": "H02 ML Engineer",
+          "company": "H02 Labs",
+          "location": "Seoul",
+          "deadline": "2026-12-31",
+          "structured_snapshot": {
+            "required_qualifications": [
+              "Python",
+              "3 years experience"
+            ],
+            "preferred_qualifications": [
+              "PyTorch"
+            ],
+            "responsibilities": [
+              "Build ML systems"
+            ],
+            "company_info": [],
+            "experience_tags": [],
+            "manual_review_flags": [],
+            "detail_quality": "verified"
+          }
+        },
+        {
+          "source_id": "fixture",
+          "source_url": "https://jobs.example.test/h03",
+          "source_posting_id": "h03",
+          "title": "H03 Data Analyst",
+          "company": "H03 Labs",
+          "location": "Seoul",
+          "deadline": "2026-12-31",
+          "structured_snapshot": {
+            "required_qualifications": [
+              "Python",
+              "2 years-4 years experience"
+            ],
+            "preferred_qualifications": [
+              "PyTorch"
+            ],
+            "responsibilities": [
+              "Build ML systems"
+            ],
+            "company_info": [],
+            "experience_tags": [],
+            "manual_review_flags": [],
+            "detail_quality": "verified"
+          }
+        },
+        {
+          "source_id": "fixture",
+          "source_url": "https://jobs.example.test/h04",
+          "source_posting_id": "h04",
+          "title": "H04 ML Engineer",
+          "company": "H04 Labs",
+          "location": "Seoul",
+          "deadline": "2026-12-31",
+          "structured_snapshot": {
+            "required_qualifications": [
+              "Bachelor or Master degree",
+              "Python"
+            ],
+            "preferred_qualifications": [
+              "PyTorch"
+            ],
+            "responsibilities": [
+              "Build ML systems"
+            ],
+            "company_info": [],
+            "experience_tags": [],
+            "manual_review_flags": [],
+            "detail_quality": "verified"
+          }
+        },
+        {
+          "source_id": "fixture",
+          "source_url": "https://jobs.example.test/h05",
+          "source_posting_id": "h05",
+          "title": "H05 ML Engineer",
+          "company": "H05 Labs",
+          "location": "Seoul",
+          "deadline": "2026-12-31",
+          "structured_snapshot": {
+            "required_qualifications": [
+              "Python",
+              "Military service required"
+            ],
+            "preferred_qualifications": [
+              "PyTorch"
+            ],
+            "responsibilities": [
+              "Build ML systems"
+            ],
+            "company_info": [],
+            "experience_tags": [],
+            "manual_review_flags": [],
+            "detail_quality": "verified"
+          }
+        },
+        {
+          "source_id": "fixture",
+          "source_url": "https://jobs.example.test/h06",
+          "source_posting_id": "h06",
+          "title": "H06 ML Engineer",
+          "company": "H06 Labs",
+          "location": "Seoul",
+          "deadline": "2026-12-31",
+          "structured_snapshot": {
+            "required_qualifications": [
+              "Python"
+            ],
+            "preferred_qualifications": [
+              "PyTorch"
+            ],
+            "responsibilities": [
+              "Build ML systems"
+            ],
+            "company_info": [],
+            "experience_tags": [],
+            "manual_review_flags": [],
+            "detail_quality": "manual_only"
+          }
+        },
+        {
+          "source_id": "fixture",
+          "source_url": "https://jobs.example.test/h07",
+          "source_posting_id": "h07",
+          "title": "H07 ML Engineer",
+          "company": "H07 Labs",
+          "location": "Seoul",
+          "deadline": "2026-07-13",
+          "structured_snapshot": {
+            "required_qualifications": [
+              "Python"
+            ],
+            "preferred_qualifications": [
+              "PyTorch"
+            ],
+            "responsibilities": [
+              "Build ML systems"
+            ],
+            "company_info": [],
+            "experience_tags": [],
+            "manual_review_flags": [],
+            "detail_quality": "verified"
+          }
+        },
+        {
+          "source_id": "fixture",
+          "source_url": "https://jobs.example.test/h08",
+          "source_posting_id": "h08",
+          "title": "Unpaid Internship ML Engineer",
+          "company": "H08 Labs",
+          "location": "Seoul",
+          "deadline": "2026-12-31",
+          "structured_snapshot": {
+            "required_qualifications": [
+              "Python"
+            ],
+            "preferred_qualifications": [
+              "PyTorch"
+            ],
+            "responsibilities": [
+              "Build ML systems"
+            ],
+            "company_info": [],
+            "experience_tags": [],
+            "manual_review_flags": [],
+            "detail_quality": "verified"
+          }
+        },
+        {
+          "source_id": "fixture",
+          "source_url": "https://jobs.example.test/h09",
+          "source_posting_id": "h09",
+          "title": "H09 ML Engineer",
+          "company": "H09 Labs",
+          "location": "Seoul",
+          "deadline": "2026-12-31",
+          "structured_snapshot": {
+            "required_qualifications": [
+              "Rust"
+            ],
+            "preferred_qualifications": [
+              "PyTorch"
+            ],
+            "responsibilities": [
+              "Build ML systems"
+            ],
+            "company_info": [],
+            "experience_tags": [],
+            "manual_review_flags": [],
+            "detail_quality": "verified"
+          }
+        },
+        {
+          "source_id": "fixture",
+          "source_url": "https://jobs.example.test/h10",
+          "source_posting_id": "h10",
+          "title": "",
+          "company": "H10 Labs",
+          "location": "Seoul",
+          "deadline": "2026-12-31",
+          "structured_snapshot": {
+            "required_qualifications": [
+              "Python"
+            ],
+            "preferred_qualifications": [
+              "PyTorch"
+            ],
+            "responsibilities": [
+              "Build ML systems"
+            ],
+            "company_info": [],
+            "experience_tags": [],
+            "manual_review_flags": [],
+            "detail_quality": "verified"
+          }
+        },
+        {
+          "source_id": "fixture",
+          "source_url": "https://jobs.example.test/h11",
+          "source_posting_id": "h11",
+          "title": "H11 ML Engineer",
+          "company": "H11 Labs",
+          "location": "Seoul",
+          "deadline": "2026-12-31",
+          "structured_snapshot": {
+            "required_qualifications": [
+              "Python"
+            ],
+            "preferred_qualifications": [
+              "PyTorch"
+            ],
+            "responsibilities": [
+              "Build ML systems"
+            ],
+            "company_info": [],
+            "experience_tags": [],
+            "manual_review_flags": [
+              "review"
+            ],
+            "detail_quality": "verified"
+          }
+        },
+        {
+          "source_id": "fixture",
+          "source_url": "https://jobs.example.test/h01",
+          "source_posting_id": "h01",
+          "title": "H01 ML Engineer",
+          "company": "H01 Labs",
+          "location": "Seoul",
+          "deadline": "2026-12-31",
+          "structured_snapshot": {
+            "required_qualifications": [
+              "Python"
+            ],
+            "preferred_qualifications": [
+              "PyTorch"
+            ],
+            "responsibilities": [
+              "Build ML systems"
+            ],
+            "company_info": [],
+            "experience_tags": [],
+            "manual_review_flags": [],
+            "detail_quality": "verified"
+          }
+        }
+      ],
+      "expected": {
+        "terminal_dispositions": {
+          "H01": "apply",
+          "H02": "hold",
+          "H03": "hold",
+          "H04": "manual_review",
+          "H05": "manual_review",
+          "H06": "manual_review",
+          "H07": "expired",
+          "H08": "exclude",
+          "H09": "low_priority",
+          "H10": "rejected",
+          "H11": "manual_review",
+          "H12": "duplicate"
+        },
+        "scores": {
+          "H01": 80,
+          "H02": 70,
+          "H03": 60,
+          "H04": 80,
+          "H05": 80,
+          "H06": 80,
+          "H07": 80,
+          "H08": 80,
+          "H09": 40,
+          "H10": null,
+          "H11": 80,
+          "H12": null
+        },
+        "reason_codes": {
+          "H01": [],
+          "H02": [
+            "experience_mismatch"
+          ],
+          "H03": [],
+          "H04": [
+            "education_ambiguous"
+          ],
+          "H05": [
+            "manual_flag"
+          ],
+          "H06": [
+            "manual_source"
+          ],
+          "H07": [
+            "expired"
+          ],
+          "H08": [
+            "dealbreaker"
+          ],
+          "H09": [],
+          "H11": [
+            "manual_flag"
+          ]
+        },
+        "actionable_ids": [
+          "H01",
+          "H02",
+          "H03"
+        ],
+        "manual_ids": [
+          "H04",
+          "H05",
+          "H06",
+          "H11"
+        ],
+        "displayed_actionable_ids": [
+          "H01",
+          "H02",
+          "H03"
+        ],
+        "displayed_manual_ids": [
+          "H04",
+          "H05"
+        ],
+        "suppressed_ids": [
+          "H06",
+          "H11"
+        ],
+        "summary": {
+          "collected": 12,
+          "source_rejected": 1,
+          "source_accepted": 11,
+          "duplicates_removed": 1,
+          "deduplicated": 10,
+          "expired": 1,
+          "exclude": 1,
+          "manual_review_total": 4,
+          "apply_total": 1,
+          "hold_total": 2,
+          "low_priority_total": 1,
+          "actionable_total": 3,
+          "displayed_apply": 1,
+          "displayed_hold": 2,
+          "suppressed_apply": 0,
+          "suppressed_hold": 0,
+          "displayed_manual": 2,
+          "suppressed_manual": 2
+        },
+        "source_metrics": [
+          {
+            "source_id": "fixture",
+            "attempted": true,
+            "accepted_count": 11,
+            "rejected_count": 1,
+            "duplicate_count": 1,
+            "normalized_changed_field_count": 0,
+            "normalized_emptied_field_count": 0,
+            "verified_count": 9,
+            "manual_only_count": 1,
+            "error_codes": [
+              "invalid_candidate"
+            ],
+            "duration_ms": 0
+          }
+        ],
+        "report_bytes": "# 채용 추천 리포트 — 2026-07-14\n\n## 한눈에 보기\n- 수집: 12\n- 상세 거부: 1\n- 중복 제거: 1\n- 지원 추천: 1\n- 도전 지원: 2\n- 원문 확인 필요: 4\n- 제외: 3\n- 표시: 지원 추천 1, 도전 지원 2, 원문 확인 필요 2\n\n## 지원/검토\n| 순위 | 판정 | 점수 | 공고 | 회사 | 마감 | 근거 | 사유 | 링크 |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n| 1 | 지원 추천 | 80 | H01 ML Engineer | H01 Labs | 2026-12-31 | 필수 요건 일치, 우대 요건 일치, 선호 직무 일치, 근무지 조건 일치 | - | [열기](<https://jobs.example.test/h01>) |\n| 2 | 도전 지원 | 70 | H02 ML Engineer | H02 Labs | 2026-12-31 | 필수 요건 일치, 우대 요건 일치, 선호 직무 일치, 근무지 조건 일치 | 지원 조건 확인 필요 | [열기](<https://jobs.example.test/h02>) |\n| 3 | 도전 지원 | 60 | H03 Data Analyst | H03 Labs | 2026-12-31 | 필수 요건 일치, 우대 요건 일치, 근무지 조건 일치 | - | [열기](<https://jobs.example.test/h03>) |\n\n## 원문 확인 필요\n| 순위 | 사유 | 공고 | 링크 |\n| --- | --- | --- | --- |\n| 1 | 학력 요건 확인 필요 | H04 ML Engineer - H04 Labs | [열기](<https://jobs.example.test/h04>) |\n| 2 | 수동 확인 필요 | H05 ML Engineer - H05 Labs | [열기](<https://jobs.example.test/h05>) |\n\n## 제외\n- 표시하지 않은 지원 추천/도전 지원: 0\n- 표시하지 않은 원문 확인 필요: 2\n- 낮은 우선순위 상세와 원문은 저장하거나 출력하지 않습니다.\n",
+        "gate": {
+          "status": "pass",
+          "summary": {
+            "collected": 12,
+            "source_rejected": 1,
+            "source_accepted": 11,
+            "duplicates_removed": 1,
+            "deduplicated": 10,
+            "expired": 1,
+            "exclude": 1,
+            "manual_review_total": 4,
+            "apply_total": 1,
+            "hold_total": 2,
+            "low_priority_total": 1,
+            "actionable_total": 3,
+            "displayed_apply": 1,
+            "displayed_hold": 2,
+            "suppressed_apply": 0,
+            "suppressed_hold": 0,
+            "displayed_manual": 2,
+            "suppressed_manual": 2
+          },
+          "sources": [
+            {
+              "source_id": "fixture",
+              "attempted": true,
+              "candidate_count": 11,
+              "source_rejected_count": 1,
+              "duplicate_count": 1,
+              "normalized_changed_field_count": 0,
+              "normalized_emptied_field_count": 0,
+              "detail_quality": {
+                "verified": 9,
+                "manual_only": 1,
+                "rejected": 1
+              },
+              "error_count": 1,
+              "error_codes": [
+                "invalid_candidate"
+              ],
+              "duration_ms": 0
+            }
+          ]
+        },
+        "gate_bytes": "{\"schema_version\":2,\"command_mode\":\"dry-run\",\"run_date\":\"2026-07-14\",\"pipeline_schema_version\":2,\"score_schema_version\":2,\"disposition_schema_version\":2,\"status\":\"pass\",\"context_status\":\"complete\",\"report\":{\"generated\":true,\"content_sha256\":\"044d1e0f607cc9cd66552789d48163d682f6ac2f88cf2496b6b34fe6739d58e4\",\"byte_length\":1540,\"queue_parity\":true},\"sources\":[{\"source_id\":\"fixture\",\"attempted\":true,\"candidate_count\":11,\"source_rejected_count\":1,\"duplicate_count\":1,\"normalized_changed_field_count\":0,\"normalized_emptied_field_count\":0,\"detail_quality\":{\"verified\":9,\"manual_only\":1,\"rejected\":1},\"error_count\":1,\"error_codes\":[\"invalid_candidate\"],\"duration_ms\":0}],\"summary\":{\"collected\":12,\"source_rejected\":1,\"source_accepted\":11,\"duplicates_removed\":1,\"deduplicated\":10,\"expired\":1,\"exclude\":1,\"manual_review_total\":4,\"apply_total\":1,\"hold_total\":2,\"low_priority_total\":1,\"actionable_total\":3,\"displayed_apply\":1,\"displayed_hold\":2,\"suppressed_apply\":0,\"suppressed_hold\":0,\"displayed_manual\":2,\"suppressed_manual\":2},\"eligibility_reason_counts\":{\"education_ambiguous\":1,\"experience_match\":1,\"experience_mismatch\":1},\"manual_reason_counts\":{\"education_ambiguous\":1,\"manual_flag\":2,\"manual_source\":1},\"invariants\":[\"disposition_schema_v2\",\"pipeline_schema_v2\",\"queue_parity\",\"reason_counts_sorted\",\"report_artifact_valid\",\"score_schema_v2\",\"source_rows_sorted\",\"summary_projection_consistent\"],\"findings\":[]}",
+        "identity_projection": {
+          "H01": {
+            "kind": "source_posting_id",
+            "source_id": "fixture",
+            "value": "h01"
+          },
+          "H02": {
+            "kind": "source_posting_id",
+            "source_id": "fixture",
+            "value": "h02"
+          },
+          "H03": {
+            "kind": "source_posting_id",
+            "source_id": "fixture",
+            "value": "h03"
+          },
+          "H04": {
+            "kind": "source_posting_id",
+            "source_id": "fixture",
+            "value": "h04"
+          },
+          "H05": {
+            "kind": "source_posting_id",
+            "source_id": "fixture",
+            "value": "h05"
+          },
+          "H06": {
+            "kind": "source_posting_id",
+            "source_id": "fixture",
+            "value": "h06"
+          },
+          "H07": {
+            "kind": "source_posting_id",
+            "source_id": "fixture",
+            "value": "h07"
+          },
+          "H08": {
+            "kind": "source_posting_id",
+            "source_id": "fixture",
+            "value": "h08"
+          },
+          "H09": {
+            "kind": "source_posting_id",
+            "source_id": "fixture",
+            "value": "h09"
+          },
+          "H11": {
+            "kind": "source_posting_id",
+            "source_id": "fixture",
+            "value": "h11"
+          }
+        },
+        "envelope_projection": {
+          "schema_version": 3,
+          "gate_status": "pass",
+          "context_status": "complete",
+          "summary": {
+            "collected": 12,
+            "source_rejected": 1,
+            "source_accepted": 11,
+            "duplicates_removed": 1,
+            "deduplicated": 10,
+            "expired": 1,
+            "exclude": 1,
+            "manual_review_total": 4,
+            "apply_total": 1,
+            "hold_total": 2,
+            "low_priority_total": 1,
+            "actionable_total": 3,
+            "displayed_apply": 1,
+            "displayed_hold": 2,
+            "suppressed_apply": 0,
+            "suppressed_hold": 0,
+            "displayed_manual": 2,
+            "suppressed_manual": 2
+          }
+        }
+      }
+    }
+  ]
+}

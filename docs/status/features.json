@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-07-12",
+  "updated_at": "2026-07-17",
   "product_summary": "Codex 예약됨에 등록하도록 설계된 local-first recruiting report service: collect reviewed no-human sources, score against user-owned personal_info/filter rules, persist feedback/history, and generate Korean recommendation reports.",
   "features": [
     {
@@ -75,7 +75,7 @@
       "name": "Core platform source adapters",
       "category": "source",
       "status": "done",
-      "user_value": "JobKorea, Saramin, Wanted, Jumpit, Rallit, RocketPunch에서 no-human target 후보를 수집한다.",
+      "user_value": "JobKorea, 사람인, Wanted, Jumpit, Rallit, RocketPunch에서 no-human target 후보를 제한 시간 안에 수집한다.",
       "entrypoints": [
         "recruit-crawler live-run"
       ],
@@ -97,7 +97,9 @@
         "tests/test_wanted_discovery.py::test_wanted_adapter_falls_back_to_public_search_api_when_listing_is_skeleton",
         "tests/test_jumpit_adapter.py::test_jumpit_adapter_collects_jobs_from_sitemap_and_react_data",
         "tests/test_rallit_adapter.py::test_rallit_adapter_collects_jobs_from_public_positions",
-        "tests/test_rocketpunch_adapter.py::test_rocketpunch_browser_automation_parses_listing_cards_without_detail_links"
+        "tests/test_rocketpunch_adapter.py::test_rocketpunch_browser_automation_parses_listing_cards_without_detail_links",
+        "tests/test_source_coordinator.py::test_candidates_merge_in_manifest_order_not_completion_order",
+        "tests/test_rallit_adapter.py::test_verified_rallit_links_canonicalize_unicode_slugs_and_reject_unsafe_forms"
       ],
       "docs_refs": [
         "docs/source_search_logic.md",
@@ -188,7 +190,7 @@
       ],
       "test_refs": [
         "tests/test_pipeline_flows.py::test_recommendation_buckets_include_apply_hold_and_low_priority",
-        "tests/test_pipeline_live_flows.py::test_live_run_allows_two_years_and_filters_above_profile_limit",
+        "tests/test_pipeline_live_flows.py::test_live_run_holds_one_year_over_profile_limit",
         "tests/test_model_context_ranking.py::test_ranking_prefers_ml_fixture_with_model_context"
       ],
       "docs_refs": [
@@ -359,7 +361,7 @@
       ],
       "code_refs": [
         "src/recruit_crawler/pipeline.py::build_live_run_preflight_gate",
-        "src/recruit_crawler/pipeline.py::build_live_run_quality_gate"
+        "src/recruit_crawler/gate.py::build_gate_v2"
       ],
       "test_refs": [
         "tests/test_live_context_cli.py::test_live_run_missing_context_is_noninteractive_quality_failure",
@@ -468,11 +470,13 @@
         "src/recruit_crawler/storage.py::persist_scheduled_run",
         "src/recruit_crawler/storage.py::export_runs",
         "src/recruit_crawler/storage.py::export_recommendations",
+        "src/recruit_crawler/_storage_core.py::_migrate_v3_to_v4",
         "src/recruit_crawler/cli.py::scheduled-history"
       ],
       "test_refs": [
         "tests/test_feedback_cli.py::test_scheduled_run_persists_history_without_duplicate_rows",
-        "tests/test_feedback_cli.py::test_feedback_add_records_event_for_persisted_recommendation"
+        "tests/test_feedback_cli.py::test_feedback_add_records_event_for_persisted_recommendation",
+        "tests/test_storage.py::test_v3_migration_success_is_idempotent_without_fabricated_outcomes"
       ],
       "docs_refs": [
         "README.md",
@@ -502,7 +506,9 @@
         "tests/test_scheduled_policy.py::test_scheduled_run_missing_context_is_noninteractive_quality_failure",
         "tests/test_scheduled_policy.py::test_scheduled_run_rejects_manual_enabled_source_policy",
         "tests/test_scheduled_run.py::test_scheduled_run_rerun_reuses_stable_identity_and_artifacts",
-        "tests/test_scheduled_policy.py::test_scheduled_run_private_context_uses_privacy_exit_code"
+        "tests/test_scheduled_policy.py::test_scheduled_run_private_context_uses_privacy_exit_code",
+        "tests/test_source_coordinator.py::test_source_cap_produces_typed_timeout",
+        "tests/test_scheduled_policy.py::test_scheduled_run_network_preflight_blocks_before_collection"
       ],
       "docs_refs": [
         "README.md",

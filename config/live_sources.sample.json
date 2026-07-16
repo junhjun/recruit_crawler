@@ -1,5 +1,5 @@
 {
-  "top_n": 8,
+  "top_n": 3,
   "output_dir": "reports",
   "fixture_path": "fixtures/postings.json",
   "delivery_mode": "markdown_local",
@@ -65,6 +65,8 @@
         "structured_snapshot"
       ],
       "options": {
+        "acquisition_strategy": "detail_only",
+        "outer_strategy_approval": "not_probed",
         "keywords": "python ai data llm",
         "candidate_include_keywords": [
           "AI",
@@ -645,20 +647,27 @@
     {
       "source_id": "linkedin",
       "enabled": false,
-      "access_mode": "public_page",
-      "auth_required": true,
-      "tos_review_status": "unknown",
+      "access_mode": "manual",
+      "auth_required": false,
+      "tos_review_status": "manual_capture_only",
       "domains": [
         "www.linkedin.com"
       ],
-      "rate_limit": "approved partner/API access only",
+      "rate_limit": "manual",
       "failure_mode": "skip_source",
-      "allowed_persisted_fields": [],
+      "allowed_persisted_fields": [
+        "source_id",
+        "source_url",
+        "source_posting_id",
+        "title",
+        "company",
+        "location",
+        "deadline",
+        "structured_snapshot"
+      ],
       "options": {
-        "search_urls": [],
-        "max_pages": 20,
-        "delay_seconds": 1,
-        "require_robots": true
+        "capture_only": true,
+        "automatic_collection": false
       },
       "display_name": "LinkedIn",
       "v1_role": "excluded",
@@ -666,17 +675,16 @@
       "maintenance_status": "excluded",
       "target_lane": null,
       "candidate_lanes": [],
-      "automation_level": "excluded",
-      "status_reason": "V1 target workflow에서 제외합니다. 직접 스크래핑/API/partner payload는 target이 아닙니다.",
+      "automation_level": "human",
+      "status_reason": "수동 캡처 import 전용입니다. 자동 수집, 직접 스크래핑, API, partner payload는 허용하지 않습니다.",
       "evidence": [
         "fixtures/chrome_captures/linkedin_detail.json retained as historical/manual fixture only"
       ],
       "blockers": [
-        "direct scraping blocked",
-        "auth/session/privacy risk",
-        "partner/API payload excluded"
+        "automatic collection prohibited",
+        "auth/session/privacy risk"
       ],
-      "next_action": "V1에서는 자동 수집 대상에 포함하지 않습니다.",
+      "next_action": "수동 캡처 import 회귀 fixture만 유지합니다.",
       "adapter_code_path": "",
       "test_refs": [],
       "docs_refs": [

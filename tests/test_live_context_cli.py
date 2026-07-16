@@ -5,7 +5,7 @@ import json
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -62,10 +62,9 @@ class LiveContextCliTests(unittest.TestCase):
         self.assertEqual(exit_code, 1)
         self.assertEqual(gate["status"], "fail")
         self.assertEqual(gate["context_status"], "needs_context")
-        self.assertEqual(
-            set(gate["missing_context"]),
-            {"desired_roles", "skills", "preferred_locations", "max_experience_years"},
-        )
+        self.assertTrue(gate["findings"])
+        self.assertEqual(set(gate["findings"][0]), {"severity", "source_id", "message"})
+        self.assertEqual(gate["findings"][0]["severity"], "fail")
         self.assertEqual(gate["sources_attempted"], [])
         self.assertNotIn("Supplemental context interview", output.getvalue())
         self.assertIn("Live run blocked", output.getvalue())
@@ -101,8 +100,46 @@ class LiveContextCliTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(gate["status"], "pass")
         self.assertEqual(gate["context_status"], "complete")
-        self.assertEqual(gate["missing_context"], [])
+        self.assertNotIn("missing_context", gate)
+        self.assertEqual(gate["findings"], [])
         self.assertIn("Supplemental context interview:", output.getvalue())
+
+    def test_live_run_print_report_matches_persisted_utf8_bytes(self) -> None:
+        output = io.StringIO()
+        diagnostics = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(output), redirect_stderr(diagnostics):
+            tmp_path = Path(tmp)
+            config_path = write_missing_context_config(tmp_path)
+            context_path = tmp_path / "complete.md"
+            context_path.write_text(
+                "Roles: ML Engineer\nSkills: Python, machine learning\n"
+                "Locations: Seoul\nExperience: 2 years\n",
+                encoding="utf-8",
+            )
+
+            exit_code = cli_main(
+                [
+                    "live-run",
+                    "--config",
+                    str(config_path),
+                    "--run-date",
+                    "2026-06-30",
+                    "--context-doc",
+                    str(context_path),
+                    "--print-report",
+                ]
+            )
+            report_line = next(
+                line for line in diagnostics.getvalue().splitlines() if line.startswith("Report written: ")
+            )
+            report_path = Path(report_line.partition(":")[2].strip())
+            report_bytes = report_path.read_bytes()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(output.getvalue().encode("utf-8"), report_bytes)
+        self.assertTrue(report_bytes.endswith(b"\n"))
+        self.assertIn("Report written:", diagnostics.getvalue())
+        self.assertIn("Live-run quality gate status: pass", diagnostics.getvalue())
 
 
 if __name__ == "__main__":

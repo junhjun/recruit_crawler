@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from recruit_crawler.config import apply_context_documents, load_config
 from recruit_crawler.model_context import ModelContextExtraction
 from recruit_crawler.pipeline import run_dry_run
+from recruit_crawler.projection import project_pipeline_result
 
 CONFIG = ROOT / "config" / "sample_config.json"
 
@@ -56,8 +57,9 @@ class ModelContextRankingTests(unittest.TestCase):
                 [context_doc],
                 extractor=RankingContextExtractor(extraction),
             )
-            _summary, _report, ranked = run_dry_run(config, date(2026, 7, 10))
+            result = run_dry_run(config, date(2026, 7, 10))
+            ranked = project_pipeline_result(result)["action_queue"]
 
         # Then: the most relevant ML opportunity ranks first.
-        self.assertEqual(ranked[0].snapshot.title, "ML Engineer, Recommendation Systems")
-        self.assertGreater(ranked[0].score, 50)
+        self.assertEqual(ranked[0]["title"], "ML Engineer, Recommendation Systems")
+        self.assertGreater(ranked[0]["score"], 50)

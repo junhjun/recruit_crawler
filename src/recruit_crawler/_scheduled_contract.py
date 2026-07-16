@@ -59,7 +59,19 @@ class DbPathMetadata(TypedDict):
     path_hash: str
 
 
+class RuntimeGateContext(TypedDict, total=False):
+    """Public runtime facts passed to GateV2 by scheduled orchestration."""
+
+    enabled_source_ids: list[str]
+    context_status: str
+    scheduled_policy_failures: list[str]
+    scheduled_db_failure: bool
+    scheduled_network_failure: bool
+    preflight: bool
+
+
 class ScheduledQualityGate(TypedDict, total=False):
+    runtime_gate_context: RuntimeGateContext | None
     schema_version: int
     command_mode: str
     run_date: str
@@ -207,6 +219,7 @@ def scheduled_quality_gate(
     run_identity: RunIdentity,
     *,
     report_generated: bool,
+    runtime_gate_context: RuntimeGateContext | None = None,
 ) -> ScheduledQualityGate:
     findings = [*live_gate["findings"], *policy_findings]
     if missing_fields:
@@ -229,5 +242,6 @@ def scheduled_quality_gate(
         "report_generated": report_generated,
         "source_policy": source_policy,
         "run_identity": run_identity,
+        "runtime_gate_context": runtime_gate_context,
         "findings": findings,
     }

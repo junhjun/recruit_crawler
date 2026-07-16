@@ -69,10 +69,32 @@ def _rocketpunch_posting_id(block: str) -> str:
     )
 
 
-def _rocketpunch_source_url(listing_url: str, posting_id: str) -> str:
+def _rocketpunch_is_direct_detail_url(url: str) -> bool:
+    parsed = urlparse(url)
+    return (
+        parsed.scheme in {"http", "https"}
+        and parsed.netloc in {"rocketpunch.com", "www.rocketpunch.com"}
+        and bool(re.fullmatch(r"/en/jobs/\d+/?", parsed.path))
+    )
+
+
+def _rocketpunch_source_url(
+    listing_url: str,
+    posting_id: str,
+    direct_href: Optional[str] = None,
+) -> str:
+    if direct_href:
+        return urljoin(listing_url, direct_href)
     if posting_id.startswith("listing-"):
         return listing_url
     return urljoin(listing_url, f"/en/jobs?selectedJobId={posting_id}")
+
+def _rocketpunch_direct_detail_href(block: str, listing_url: str) -> Optional[str]:
+    href = _first_match(
+        block,
+        r'href="((?:https?://[^"]+)?/en/jobs/\d+(?:\?[^"]*)?)"',
+    )
+    return urljoin(listing_url, href) if href else None
 
 def _rocketpunch_card_title(block: str, text: str) -> str:
     for pattern in (

@@ -17,6 +17,7 @@ from .cli_handlers import (
     handle_scheduled_run,
     handle_source_status,
     handle_status_report,
+    handle_saramin_strategy_probe,
 )
 from .live_run import handle_live_run
 
@@ -36,6 +37,7 @@ _COMMAND_HANDLERS: dict[str, CommandHandler] = {
     "browser-evidence": handle_browser_evidence,
     "context-doctor": handle_context_doctor,
     "status-report": handle_status_report,
+    "saramin-strategy-probe": handle_saramin_strategy_probe,
 }
 
 
@@ -108,6 +110,10 @@ def build_parser() -> argparse.ArgumentParser:
     status_report.add_argument("--todo", type=Path, default=Path("TODO.md"))
     status_report.add_argument("--check", action="store_true", help="fail if the generated status report differs from --output")
     status_report.add_argument("--brief", action="store_true", help="print a token-minimal progress brief without regenerating docs/status.md")
+    saramin_probe = subparsers.add_parser("saramin-strategy-probe", help="authorized diagnostic-only 사람인 strategy probe")
+    saramin_probe.add_argument("--authorized-live-probe", action="store_true")
+    saramin_probe.add_argument("--rec-idx", action="append", default=[])
+    saramin_probe.add_argument("--output-dir", type=Path)
     return parser
 
 

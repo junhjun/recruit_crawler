@@ -28,6 +28,12 @@ class SourceAccessError(RuntimeError):
     pass
 
 
+class SourceBudgetExceeded(TimeoutError):
+    """The source's absolute collection deadline has elapsed."""
+
+    pass
+
+
 @dataclass(frozen=True, slots=True)
 class HttpResponse:
     url: str
@@ -47,7 +53,7 @@ class _SafeRedirectHandler(HTTPRedirectHandler):
 class PublicJobsHttpAdapter(HttpHtmlParsingMixin):
     """Collect public job pages after a source review enables the manifest."""
 
-    def __init__(self, manifest: SourceManifest):
+    def __init__(self, manifest: SourceManifest, *, deadline: Optional[float] = None):
         self.manifest = manifest
         self.options = manifest.options
         self.errors: List[str] = []
@@ -65,6 +71,21 @@ class PublicJobsHttpAdapter(HttpHtmlParsingMixin):
         self.candidate_exclude_keywords = _normalized_keywords(
             self.options.get("candidate_exclude_keywords", [])
         )
+        self._collection_deadline: Optional[float] = deadline
+
+    def set_collection_deadline(self, deadline: Optional[float]) -> None:
+        self._collection_deadline = deadline
+
+    def _remaining_budget(self) -> Optional[float]:
+        if self._collection_deadline is None:
+            return None
+        remaining = self._collection_deadline - time.monotonic()
+        if remaining <= 0:
+            raise SourceBudgetExceeded("source collection budget exhausted")
+        return remaining
+
+    def _ensure_budget(self) -> None:
+        self._remaining_budget()
 
     def collect(self) -> List[PostingCandidate]:
         self._validate_access()
@@ -77,6 +98,8 @@ class PublicJobsHttpAdapter(HttpHtmlParsingMixin):
             seen_urls.add(url)
             try:
                 response = self._fetch(url)
+            except SourceBudgetExceeded:
+                raise
             except (HTTPException, OSError, SourceAccessError) as exc:
                 if self.manifest.failure_mode == "fail_run":
                     raise
@@ -132,6 +155,7 @@ class PublicJobsHttpAdapter(HttpHtmlParsingMixin):
             )
 
     def _fetch(self, url: str) -> HttpResponse:
+        self._ensure_budget()
         self._validate_url(url)
         if self.require_robots:
             robots_allowed = self._robots_allows(url)
@@ -142,10 +166,12 @@ class PublicJobsHttpAdapter(HttpHtmlParsingMixin):
         request = Request(url, headers={"User-Agent": self.user_agent})
         with self._open_request(request) as response:
             charset = response.headers.get_content_charset() or "utf-8"
+            self._ensure_budget()
             body = response.read().decode(charset, errors="replace")
             return HttpResponse(url=response.geturl(), text=body)
 
     def _post_fetch(self, url: str, data: Dict[str, Any]) -> HttpResponse:
+        self._ensure_budget()
         self._validate_url(url)
         if self.require_robots:
             robots_allowed = self._robots_allows(url)
@@ -164,6 +190,7 @@ class PublicJobsHttpAdapter(HttpHtmlParsingMixin):
         )
         with self._open_request(request) as response:
             charset = response.headers.get_content_charset() or "utf-8"
+            self._ensure_budget()
             body = response.read().decode(charset, errors="replace")
             return HttpResponse(url=response.geturl(), text=body)
 
@@ -174,6 +201,7 @@ class PublicJobsHttpAdapter(HttpHtmlParsingMixin):
         *,
         headers: Optional[Dict[str, str]] = None,
     ) -> HttpResponse:
+        self._ensure_budget()
         self._validate_url(url)
         if self.require_robots:
             robots_allowed = self._robots_allows(url)
@@ -189,6 +217,7 @@ class PublicJobsHttpAdapter(HttpHtmlParsingMixin):
         request = Request(request_url, headers=request_headers)
         with self._open_request(request) as response:
             charset = response.headers.get_content_charset() or "utf-8"
+            self._ensure_budget()
             body = response.read().decode(charset, errors="replace")
             return HttpResponse(url=response.geturl(), text=body)
 
@@ -196,8 +225,12 @@ class PublicJobsHttpAdapter(HttpHtmlParsingMixin):
         opener = build_opener(_SafeRedirectHandler(self))
         last_error: Optional[HTTPException | OSError | SourceAccessError] = None
         for _attempt in range(self.fetch_retries + 1):
+            remaining = self._remaining_budget()
+            timeout = self.timeout_seconds if remaining is None else min(self.timeout_seconds, remaining)
             try:
-                return opener.open(request, timeout=self.timeout_seconds)
+                return opener.open(request, timeout=timeout)
+            except SourceBudgetExceeded:
+                raise
             except (HTTPException, OSError, SourceAccessError) as exc:
                 last_error = exc
         assert last_error is not None
@@ -215,11 +248,15 @@ class PublicJobsHttpAdapter(HttpHtmlParsingMixin):
         robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
         parser = RobotFileParser()
         try:
+            self._ensure_budget()
             request = Request(robots_url, headers={"User-Agent": self.user_agent})
             with self._open_request(request) as response:
                 charset = response.headers.get_content_charset() or "utf-8"
+                self._ensure_budget()
                 body = response.read().decode(charset, errors="replace")
             parser.parse(body.splitlines())
+        except SourceBudgetExceeded:
+            raise
         except (HTTPException, OSError, SourceAccessError):
             return None
         return parser.can_fetch(self.user_agent, url)
@@ -249,4 +286,6 @@ class PublicJobsHttpAdapter(HttpHtmlParsingMixin):
 
     def _sleep(self) -> None:
         if self.delay_seconds > 0:
-            time.sleep(self.delay_seconds)
+            remaining = self._remaining_budget()
+            delay = self.delay_seconds if remaining is None else min(self.delay_seconds, remaining)
+            time.sleep(delay)

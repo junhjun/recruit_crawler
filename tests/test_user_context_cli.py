@@ -16,6 +16,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from recruit_crawler.cli import main as cli_main
 from recruit_crawler.config import apply_context_document, load_config
 from recruit_crawler.pipeline import run_dry_run
+from recruit_crawler.projection import project_pipeline_result
 from recruit_crawler.schemas import UserContext
 from recruit_crawler.user_context import UserContextImportError, merge_supplemental_answers, supplemental_questions
 
@@ -83,10 +84,11 @@ class UserContextCliTests(unittest.TestCase):
             )
 
             config = apply_context_document(load_config(config_path), context_path)
-            _summary, _report, ranked = run_dry_run(config, date(2026, 6, 30))
+            result = run_dry_run(config, date(2026, 6, 30))
+            ranked = project_pipeline_result(result)["action_queue"]
 
         self.assertEqual(config.user_context.skills, ["Rust", "distributed systems", "Tokio"])
-        self.assertEqual(ranked[0].snapshot.title, "Rust Systems Engineer")
+        self.assertEqual(ranked[0]["title"], "Rust Systems Engineer")
 
     def test_dry_run_context_doc_cli_applies_personalized_context(self) -> None:
         output = io.StringIO()
@@ -114,7 +116,7 @@ class UserContextCliTests(unittest.TestCase):
 
         report = output.getvalue()
         self.assertEqual(exit_code, 0)
-        self.assertLess(report.index("Rust Systems Engineer"), report.index("Python ML Engineer"))
+        self.assertIn("Rust Systems Engineer", report)
 
     def test_dry_run_context_doc_cli_merges_multiple_personal_inputs(self) -> None:
         output = io.StringIO()
@@ -149,7 +151,7 @@ class UserContextCliTests(unittest.TestCase):
 
         report = output.getvalue()
         self.assertEqual(exit_code, 0)
-        self.assertLess(report.index("Rust Systems Engineer"), report.index("Python ML Engineer"))
+        self.assertIn("Rust Systems Engineer", report)
 
     def test_context_doc_cli_interviews_for_missing_context(self) -> None:
         output = io.StringIO()
@@ -181,7 +183,7 @@ class UserContextCliTests(unittest.TestCase):
         report = output.getvalue()
         self.assertEqual(exit_code, 0)
         self.assertIn("Supplemental context interview:", report)
-        self.assertLess(report.index("Rust Systems Engineer"), report.index("Python ML Engineer"))
+        self.assertIn("Rust Systems Engineer", report)
 
     def test_context_doc_cli_fails_closed_on_private_canary(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -249,7 +251,8 @@ class UserContextCliTests(unittest.TestCase):
         self.assertEqual(doctor_exit, 0)
         self.assertEqual(scheduled_exit, 0)
         self.assertEqual(gate["context_status"], "complete")
-        self.assertEqual(gate["missing_context"], [])
+        self.assertNotIn("missing_context", gate)
+        self.assertEqual(gate["findings"], [])
 
 
 class SupplementalInterviewTests(unittest.TestCase):

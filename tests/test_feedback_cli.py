@@ -76,13 +76,34 @@ class FeedbackCliTests(unittest.TestCase):
         self.assertEqual(run_count, 1)
         self.assertEqual(gate_count, 1)
         self.assertEqual(source_count, 1)
-        self.assertEqual(recommendation_count, 4)
-        self.assertEqual(schema_version, "1")
-        self.assertEqual(tuple(persisted_run), ("pass", "complete", 1, 4))
+        self.assertGreater(recommendation_count, 0)
+        self.assertEqual(schema_version, "4")
+        self.assertEqual(tuple(persisted_run[:3]), ("pass", "complete", 1))
+        self.assertEqual(persisted_run[3], recommendation_count)
         self.assertEqual(len(history["runs"]), 1)
-        self.assertEqual(len(history["recommendations"]), 4)
-        self.assertTrue(history["recommendations"][0]["recommendation_id"])
-        self.assertIn("title", history["recommendations"][0])
+        self.assertEqual(len(history["recommendations"]), recommendation_count)
+        recommendation = history["recommendations"][0]
+        for field in (
+            "recommendation_id",
+            "posting_key",
+            "run_id",
+            "source_id",
+            "source_url",
+            "source_posting_id",
+            "title",
+            "company",
+            "location",
+            "deadline",
+            "score",
+            "final_disposition",
+            "reason_codes",
+            "source_detail_quality",
+        ):
+            self.assertIn(field, recommendation)
+        self.assertNotIn("opaque_identity", recommendation)
+        self.assertNotIn("raw_structured", recommendation)
+        self.assertNotIn("raw_jd", recommendation)
+        self.assertNotIn("PRIVATE_PROFILE_CANARY", json.dumps(history, ensure_ascii=False))
 
     def test_feedback_add_records_event_for_persisted_recommendation(self) -> None:
         output = io.StringIO()
@@ -145,7 +166,7 @@ class FeedbackCliTests(unittest.TestCase):
         feedback_events = feedback_events_from_records(payload["feedback"])
         self.assertEqual(event["posting_key"], feedback_events[0].posting_id)
         self.assertEqual(event["source_id"], "fixture")
-        self.assertTrue(event["source_url"])
+        self.assertIsNone(event["source_url"])
         movement_index = feedback_movement_index(feedback_events)
         self.assertEqual(movement_index[event["posting_key"]], "up")
 

@@ -6,16 +6,44 @@ from datetime import date
 from typing import Optional
 
 from .browser_evidence import build_browser_evidence, write_browser_evidence
-from .capture_import import CaptureImportError, build_capture_quality_gate, import_capture_files, select_capture_files
+from .capture_import import (
+    CaptureImportError,
+    build_capture_quality_gate,
+    import_capture_files,
+    select_capture_files,
+    suppress_capture_report_links,
+)
 from .cli_context import context_doctor_answers, load_config_with_context
 from .config import ConfigError, load_config
 from .context_doctor import ContextDoctorRequest, run_context_doctor
 from .pipeline import run_capture_import, run_dry_run
+from .projection import false_report_artifact, project_pipeline_result
+from .report_writer import ReportPublicationResultV1, persist_rendered_report
 from .scheduled import ScheduledRunRequest, run_scheduled_job
 from .source_registry import source_status_rows
 from .status_report import StatusReportError, build_progress_brief, check_status_report, write_status_report
 from .storage import add_feedback_event, export_feedback_events, export_recommendations, export_runs
 from .user_context import UserContextImportError
+from .summarizer import render_report_v2
+
+
+def _render_result(config, result, *, report_slug: str):
+    projection = project_pipeline_result(result)
+    try:
+        rendered = render_report_v2(result)
+    except Exception:
+        publication = ReportPublicationResultV1(
+            false_report_artifact(), "render_failed", "not_published"
+        )
+    else:
+        publication = persist_rendered_report(
+            config.output_dir,
+            result.run_date,
+            rendered,
+            report_slug=report_slug,
+        )
+    return projection, publication
+
 
 
 def _parse_date(value: Optional[str]) -> date:
@@ -27,13 +55,21 @@ def _parse_date(value: Optional[str]) -> date:
 def handle_dry_run(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
     try:
         config = load_config_with_context(args, allow_real_sources=False, interview=True)
-        summary, report, _ranked = run_dry_run(config, _parse_date(args.run_date))
+        result = run_dry_run(config, _parse_date(args.run_date))
+        _projection, publication = _render_result(
+            config, result, report_slug="recruiting-dry-run"
+        )
     except (ConfigError, ValueError, FileNotFoundError) as exc:
         parser.error(str(exc))
         return 2
-    print(f"Report written: {summary.report_path}")
-    if args.print_report:
-        print(report)
+    artifact = publication.artifact
+    if not artifact.generated:
+        print("Dry run failed")
+        print("Report written: not generated")
+        return 1
+    print(f"Report written: {artifact.path}")
+    if args.print_report and artifact.rendered is not None:
+        print(artifact.rendered.markdown_bytes.decode("utf-8"))
     return 0
 
 
@@ -139,21 +175,30 @@ def handle_capture_import(args: argparse.Namespace, parser: argparse.ArgumentPar
             files=args.files,
         )
         imported = import_capture_files(selection.files)
-        summary, report, _ranked = run_capture_import(
+        result = run_capture_import(
             config,
             _parse_date(args.run_date) if args.run_date else selection.run_date,
             imported.candidates,
             imported.sources_attempted,
             imported.source_errors,
         )
+        projection, publication = _render_result(
+            config,
+            suppress_capture_report_links(result),
+            report_slug="recruiting-capture-import",
+        )
     except (ConfigError, CaptureImportError, ValueError, FileNotFoundError) as exc:
         parser.error(str(exc))
         return 2
+    artifact = publication.artifact
     print(f"Imported capture files: {len(selection.files)}")
-    print(f"Imported candidates: {summary.candidates_collected}")
-    print(f"Report written: {summary.report_path}")
-    if args.print_report:
-        print(report)
+    print(f"Imported candidates: {projection['summary']['collected']}")
+    if not artifact.generated:
+        print("Report written: not generated")
+        return 1
+    print(f"Report written: {artifact.path}")
+    if args.print_report and artifact.rendered is not None:
+        print(artifact.rendered.markdown_bytes.decode("utf-8"))
     return 0
 
 
@@ -246,3 +291,16 @@ def handle_status_report(args: argparse.Namespace, parser: argparse.ArgumentPars
         return 2
     print(f"Status report written: {args.output}")
     return 0
+
+
+def handle_saramin_strategy_probe(
+    args: argparse.Namespace, parser: argparse.ArgumentParser
+) -> int:
+    from . import saramin_strategy_probe
+
+    probe_args = [
+        *(["--authorized-live-probe"] if args.authorized_live_probe else []),
+        *[item for rec_idx in args.rec_idx for item in ("--rec-idx", rec_idx)],
+        *(["--output-dir", str(args.output_dir)] if args.output_dir is not None else []),
+    ]
+    return saramin_strategy_probe.main(probe_args)

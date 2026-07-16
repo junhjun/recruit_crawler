@@ -11,7 +11,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from recruit_crawler.config import ConfigError, load_config
+from recruit_crawler.cli import build_parser, main as cli_main
 from recruit_crawler.scheduled import scheduled_source_policy
+from recruit_crawler.report_policy import verified_link_url
+from recruit_crawler.source_registry import CAPTURE_ONLY_LINKEDIN
 
 EXPECTED_SOURCE_IDS = {
     "company_careers",
@@ -116,7 +119,12 @@ class SourcePolicyTests(unittest.TestCase):
             self.assertEqual(by_id[source_id]["scheduled_action"], "skip")
             self.assertEqual(by_id[source_id]["target_status"], "excluded")
             manifest = next(source for source in config.sources if source.source_id == source_id)
-            self.assertEqual(manifest.allowed_persisted_fields, [])
+            expected_fields = (
+                CAPTURE_ONLY_LINKEDIN.allowed_persisted_fields
+                if source_id == "linkedin"
+                else []
+            )
+            self.assertEqual(manifest.allowed_persisted_fields, expected_fields)
 
     def test_registry_allows_user_directed_policy_override_for_browser_automation(self) -> None:
         raw = self._live_config()
@@ -195,3 +203,106 @@ class SourcePolicyTests(unittest.TestCase):
             self.assertEqual(source.automation_level, "excluded")
             self.assertTrue(source.blockers)
             self.assertFalse(source.auth_required)
+    def test_company_careers_enablement_is_rejected(self) -> None:
+        raw = self._live_config()
+        company = next(
+            source for source in raw["sources"] if source["source_id"] == "company_careers"
+        )
+        company.update(
+            {
+                "enabled": True,
+                "target_status": "enabled",
+                "maintenance_status": "active",
+                "target_lane": "public_http",
+                "automation_level": "no_human",
+            }
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaisesRegex(ConfigError, "company-careers collection"):
+                load_config(self._write_temp_config(raw, Path(tmp)), allow_real_sources=True)
+
+    def test_legacy_shaped_live_source_is_rejected(self) -> None:
+        raw: RawConfig = {
+            "sources": [
+                {
+                    "source_id": "legacy_live",
+                    "enabled": True,
+                    "access_mode": "public_page",
+                }
+            ]
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ConfigError):
+                load_config(self._write_temp_config(raw, Path(tmp)), allow_real_sources=True)
+    def test_live_registry_rejects_noncanonical_and_unapproved_source_ids(self) -> None:
+        for source_id in ("linkedin ", "company_careers ", "new_company_careers"):
+            with self.subTest(source_id=source_id):
+                raw = self._live_config()
+                source = raw["sources"][0]
+                source.update(
+                    {
+                        "source_id": source_id,
+                        "enabled": True,
+                        "target_status": "enabled",
+                        "maintenance_status": "active",
+                        "target_lane": "public_http",
+                        "automation_level": "no_human",
+                        "tos_review_status": "pass",
+                    }
+                )
+                with tempfile.TemporaryDirectory() as tmp:
+                    with self.assertRaises(ConfigError):
+                        load_config(
+                            self._write_temp_config(raw, Path(tmp)), allow_real_sources=True
+                        )
+    def test_saramin_outer_report_links_require_exact_canonical_endpoint(self) -> None:
+        outer_url = "https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=54106686&rec_seq=0"
+        self.assertEqual(
+            verified_link_url(
+                "scheduled-run", "saramin", outer_url, "54106686", "verified"
+            ),
+            outer_url,
+        )
+        invalid_links = (
+            "https://www.saramin.co.kr/zf_user/jobs/relay/view",
+            "https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=54106687&rec_seq=0",
+            "https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=54106686&rec_seq=0&next=1",
+            "http://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=54106686&rec_seq=0",
+            "https://www.saramin.co.kr.evil/zf_user/jobs/relay/view?rec_idx=54106686&rec_seq=0",
+        )
+        for source_url in invalid_links:
+            with self.subTest(source_url=source_url):
+                self.assertIsNone(
+                    verified_link_url(
+                        "scheduled-run", "saramin", source_url, "54106686", "verified"
+                    )
+                )
+        self.assertEqual(
+            verified_link_url(
+                "scheduled-run",
+                "saramin",
+                "https://www.saramin.co.kr/zf_user/jobs/relay/view-detail",
+                "54106686",
+                "verified",
+            ),
+            "https://www.saramin.co.kr/zf_user/jobs/relay/view-detail?rec_idx=54106686&rec_seq=0",
+        )
+    def test_saramin_probe_registration_keeps_arguments_under_diagnostic_handler(self) -> None:
+        args = build_parser().parse_args(
+            [
+                "saramin-strategy-probe",
+                "--authorized-live-probe",
+                "--rec-idx",
+                "1",
+                "--rec-idx",
+                "2",
+                "--rec-idx",
+                "3",
+                "--output-dir",
+                "/tmp/recruit-crawler-saramin-probe-test",
+            ]
+        )
+        self.assertEqual(args.command, "saramin-strategy-probe")
+        self.assertTrue(args.authorized_live_probe)
+        self.assertEqual(args.rec_idx, ["1", "2", "3"])
+        self.assertEqual(cli_main(["saramin-strategy-probe", "--rec-idx", "1", "--rec-idx", "2", "--rec-idx", "3", "--output-dir", "/tmp/not-approved"]), 64)

@@ -1,13 +1,24 @@
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, List, Optional, Sequence
 
 from .capture_import_models import CaptureImportError, CaptureImportResult, CaptureImportSelection
 from .capture_import_parsing import CREDENTIAL_VALUE_RE, load_capture_file
-from .schemas import PostingCandidate
+from .schemas import PipelineResultV2, PostingCandidate
+
+def suppress_capture_report_links(result: PipelineResultV2) -> PipelineResultV2:
+    """Remove capture URLs from the transient report input."""
+    return replace(
+        result,
+        all_assessments=tuple(
+            replace(assessment, source_url="")
+            for assessment in result.all_assessments
+        ),
+    )
 
 PUBLIC_CONTACT_RE = re.compile(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}|\b0\d{1,2}[-.\s]?\d{3,4}[-.\s]?\d{4}\b")
 

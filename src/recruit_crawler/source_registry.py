@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Iterable, List, Optional
 
+from .identity import IdentityError, normalize_source_id
 from .schemas import SourceManifest
 
 TARGET_LANES = {"public_http", "browser_automation"}
@@ -31,10 +32,49 @@ NON_TARGET_OPTION_KEYS = {
 }
 
 POLICY_OVERRIDE_MODE = "user_directed_ignore"
+EXCLUDED_AUTOMATIC_SOURCE_IDS = frozenset(
+    {
+        "company_careers",
+        "naver_careers",
+        "kakao_careers",
+        "line_careers",
+        "coupang_careers",
+    }
+)
+AUTOMATIC_SOURCE_IDS = frozenset(
+    {"saramin", "jobkorea", "wanted", "jumpit", "rallit", "rocketpunch"}
+)
+
+
 
 
 class SourceRegistryError(ValueError):
     pass
+CAPTURE_ONLY_LINKEDIN = SourceManifest(
+    source_id="linkedin",
+    enabled=False,
+    access_mode="manual",
+    auth_required=False,
+    tos_review_status="manual_capture_only",
+    domains=["www.linkedin.com"],
+    rate_limit="manual",
+    failure_mode="skip_source",
+    allowed_persisted_fields=[
+        "source_id",
+        "source_url",
+        "source_posting_id",
+        "title",
+        "company",
+        "location",
+        "deadline",
+        "structured_snapshot",
+    ],
+    target_status="excluded",
+    maintenance_status="excluded",
+    target_lane=None,
+    automation_level="human",
+    options={"capture_only": True, "automatic_collection": False},
+)
 
 
 def _field_list(values: Iterable[str]) -> List[str]:
@@ -47,6 +87,16 @@ def validate_source_registry(sources: Iterable[SourceManifest]) -> None:
 
 
 def _validate_source(source: SourceManifest) -> None:
+    try:
+        canonical_id = normalize_source_id(source.source_id)
+    except (IdentityError, TypeError, ValueError) as exc:
+        raise SourceRegistryError("source_id must be canonical") from exc
+    if source.source_id != canonical_id:
+        raise SourceRegistryError("source_id must be canonical")
+    if source.source_id.casefold() == "linkedin":
+        _validate_linkedin_source(source)
+    if source.source_id.casefold() in EXCLUDED_AUTOMATIC_SOURCE_IDS:
+        _validate_excluded_automatic_source(source)
     if source.target_status not in TARGET_STATUSES:
         raise SourceRegistryError(f"{source.source_id}: invalid target_status: {source.target_status}")
     if source.maintenance_status not in MAINTENANCE_STATUSES:
@@ -68,7 +118,52 @@ def _validate_source(source: SourceManifest) -> None:
         raise SourceRegistryError(f"{source.source_id}: target_status enabled requires enabled=true")
 
 
+def _validate_excluded_automatic_source(source: SourceManifest) -> None:
+    if source.enabled:
+        raise SourceRegistryError(
+            f"{source.source_id}: company-careers collection is excluded and cannot be enabled"
+        )
+    if source.target_status != "excluded" or source.maintenance_status != "excluded":
+        raise SourceRegistryError(
+            f"{source.source_id}: company-careers collection must remain excluded"
+        )
+    if source.target_lane is not None or source.automation_level != "excluded":
+        raise SourceRegistryError(
+            f"{source.source_id}: company-careers collection cannot use automation"
+        )
+def _validate_linkedin_source(source: SourceManifest) -> None:
+    expected_fields = list(CAPTURE_ONLY_LINKEDIN.allowed_persisted_fields)
+    if source.enabled:
+        raise SourceRegistryError(f"{source.source_id}: LinkedIn is manual capture-only and cannot be enabled")
+    if source.access_mode != "manual":
+        raise SourceRegistryError(f"{source.source_id}: LinkedIn automatic access_mode is prohibited")
+    if source.target_status != "excluded":
+        raise SourceRegistryError(f"{source.source_id}: LinkedIn target_status must be excluded")
+    if source.maintenance_status != "excluded":
+        raise SourceRegistryError(f"{source.source_id}: LinkedIn maintenance_status must be excluded")
+    if source.target_lane is not None:
+        raise SourceRegistryError(f"{source.source_id}: LinkedIn target_lane must be null")
+    if source.auth_required:
+        raise SourceRegistryError(f"{source.source_id}: LinkedIn capture cannot require authentication")
+    if source.tos_review_status != "manual_capture_only":
+        raise SourceRegistryError(f"{source.source_id}: LinkedIn tos_review_status must be manual_capture_only")
+    if list(source.domains) != list(CAPTURE_ONLY_LINKEDIN.domains):
+        raise SourceRegistryError(f"{source.source_id}: LinkedIn domains must match capture-only policy")
+    if source.rate_limit != "manual" or source.failure_mode != "skip_source":
+        raise SourceRegistryError(f"{source.source_id}: LinkedIn capture policy has invalid rate/failure settings")
+    if list(source.allowed_persisted_fields) != expected_fields:
+        raise SourceRegistryError(f"{source.source_id}: LinkedIn persisted fields must match capture-only policy")
+    if source.automation_level != "human":
+        raise SourceRegistryError(f"{source.source_id}: LinkedIn automation_level must be human")
+    if source.options != dict(CAPTURE_ONLY_LINKEDIN.options):
+        raise SourceRegistryError(f"{source.source_id}: LinkedIn options must match capture-only policy")
+
+
 def _validate_enabled_source(source: SourceManifest) -> None:
+    if source.source_id not in AUTOMATIC_SOURCE_IDS:
+        raise SourceRegistryError(
+            f"{source.source_id}: automatic collection is not an approved target"
+        )
     if source.target_status != "enabled":
         raise SourceRegistryError(f"{source.source_id}: enabled source requires target_status=enabled")
     if source.target_lane not in TARGET_LANES:

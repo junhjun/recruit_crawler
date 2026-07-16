@@ -39,6 +39,7 @@ from .platform_rocketpunch_detail import (
     _rocketpunch_posting_id,
     _rocketpunch_skill_terms,
     _rocketpunch_source_url,
+    _rocketpunch_direct_detail_href,
     _rocketpunch_synthetic_id,
 )
 
@@ -77,7 +78,8 @@ def _candidate_from_rocketpunch_card(
     location = _rocketpunch_card_location(text)
     skills = _rocketpunch_skill_terms(text)
     posting_id = _rocketpunch_posting_id(block) or _rocketpunch_synthetic_id(index, company, title)
-    source_url = _rocketpunch_source_url(listing_url, posting_id)
+    direct_href = _rocketpunch_direct_detail_href(block, listing_url)
+    source_url = _rocketpunch_source_url(listing_url, posting_id, direct_href)
     return PostingCandidate(
         source_id=source_id,
         source_url=source_url,

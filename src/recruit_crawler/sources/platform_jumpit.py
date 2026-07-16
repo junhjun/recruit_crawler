@@ -17,7 +17,7 @@ from urllib.parse import parse_qs, urljoin, urlparse
 
 from ..schemas import PostingCandidate, SourceManifest
 from .http import PublicJobsHttpAdapter, SourceAccessError, _contains_any, _date_prefix
-from .platform_shared import _merged_options
+from .platform_shared import _merged_options, _og_description_company, _og_title
 
 
 def _sitemap_locations(xml: str) -> List[str]:
