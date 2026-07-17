@@ -62,6 +62,8 @@ _PUBLIC_SOURCE_ERROR_CODES = frozenset(
         "detail_url_invalid",
         "detail_fetch_failed",
         "detail_unverified",
+        "source_timeout",
+        "aggregate_budget_exhausted",
     }
 )
 _PUBLIC_EVIDENCE_LABELS = (

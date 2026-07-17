@@ -208,15 +208,13 @@ def _run_live_run_at_service_boundary(
     return result
 
 
-def _live_failure_gate(preflight: dict[str, Any], message: str) -> dict[str, Any]:
-    return {
-        **preflight,
-        "status": "fail",
-        "findings": [
-            *preflight.get("findings", ()),
-            {"severity": "fail", "source_id": None, "message": message},
-        ],
-    }
+def _live_failure_gate(gate: dict[str, Any], message: str) -> dict[str, Any]:
+    findings = [
+        *gate.get("findings", ()),
+        {"severity": "fail", "source_id": None, "message": message},
+    ]
+    findings.sort(key=lambda item: (item["severity"], item["source_id"] or "", item["message"]))
+    return {**gate, "status": "fail", "findings": findings}
 
 _PARTIAL_SOURCE_FAILURE_MESSAGES = frozenset(
     {
@@ -238,6 +236,36 @@ def _candidate_gate_allows_partial_publication(gate: dict[str, Any]) -> bool:
         and finding.get("message") in _PARTIAL_SOURCE_FAILURE_MESSAGES
         for finding in failures
     )
+
+def _candidate_rejection_gate(
+    gate: dict[str, Any], candidate_gate: dict[str, Any]
+) -> dict[str, Any]:
+    """Retain public non-source findings that prevented partial publication."""
+    findings = [
+        *gate.get("findings", ()),
+        {
+            "severity": "fail",
+            "source_id": None,
+            "message": "live report candidate failed validation",
+        },
+        *(
+            finding
+            for finding in candidate_gate.get("findings", ())
+            if finding.get("severity") == "fail" and finding.get("source_id") is None
+        ),
+    ]
+    unique = {
+        (finding["severity"], finding["source_id"], finding["message"]): finding
+        for finding in findings
+    }
+    return {
+        **gate,
+        "status": "fail",
+        "findings": sorted(
+            unique.values(),
+            key=lambda item: (item["severity"], item["source_id"] or "", item["message"]),
+        ),
+    }
 
 
 def handle_live_run(
@@ -367,17 +395,20 @@ def handle_live_run(
                 if rendered is None:
                     gate = candidate_gate
                 elif not _candidate_gate_allows_partial_publication(candidate_gate):
-                    gate = _build_live_gate(
-                        result,
-                        enabled_source_ids=(
-                            source.source_id
-                            for source in config.sources
-                            if source.enabled
+                    gate = _candidate_rejection_gate(
+                        _build_live_gate(
+                            result,
+                            enabled_source_ids=(
+                                source.source_id
+                                for source in config.sources
+                                if source.enabled
+                            ),
+                            context_status=preflight["context_status"],
+                            report_artifact=false_report_artifact(),
+                            projection=projection,
+                            configured_canaries=configured_canaries,
                         ),
-                        context_status=preflight["context_status"],
-                        report_artifact=false_report_artifact(),
-                        projection=projection,
-                        configured_canaries=configured_canaries,
+                        candidate_gate,
                     )
                 else:
                     publication = _publish_live_report(

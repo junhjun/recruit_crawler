@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from recruit_crawler.cli import main as cli_main
 from recruit_crawler.config import ConfigError, load_config
 from recruit_crawler.gate import build_gate_v2
-from recruit_crawler.gate import build_gate_v4
+from recruit_crawler.gate import build_gate_v4, canonical_gate_v4_bytes
 from recruit_crawler.live_run import (
     _publish_live_report,
     _run_live_run_at_service_boundary,
@@ -46,6 +46,7 @@ from recruit_crawler.schemas import (
 )
 from recruit_crawler.summarizer import render_report_v2
 from recruit_crawler.report_policy import MAX_REPORT_ROWS
+from recruit_crawler.sources.http import SourceBudgetExceeded
 
 CONFIG = ROOT / "config" / "sample_config.json"
 
@@ -465,6 +466,85 @@ class PipelineLiveFlowTests(unittest.TestCase):
         self.assertNotIn("PRIVATE_ADAPTER_EXCEPTION", report)
         self.assertNotIn("PRIVATE_ADAPTER_EXCEPTION", json.dumps(gate, ensure_ascii=False))
 
+    def test_live_run_cli_publishes_partial_report_for_source_timeout(self) -> None:
+        class TimedOutAdapter:
+            def collect(self) -> list[PostingCandidate]:
+                raise SourceBudgetExceeded("source collection budget exhausted")
+
+        raw = json.loads(CONFIG.read_text(encoding="utf-8"))
+        raw["sources"][0]["failure_mode"] = "skip_source"
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(output):
+            tmp_path = Path(tmp)
+            config_path = tmp_path / "config.json"
+            gate_path = tmp_path / "live_quality_gate.json"
+            raw["output_dir"] = str(tmp_path / "reports")
+            config_path.write_text(json.dumps(raw), encoding="utf-8")
+            with patch(
+                "recruit_crawler.pipeline.build_source_adapter",
+                return_value=TimedOutAdapter(),
+            ):
+                exit_code = cli_main(
+                    [
+                        "live-run",
+                        "--config",
+                        str(config_path),
+                        "--run-date",
+                        "2026-06-30",
+                        "--quality-gate-output",
+                        str(gate_path),
+                    ]
+                )
+            gate = json.loads(gate_path.read_text(encoding="utf-8"))
+            report_path = tmp_path / "reports" / "recruiting-live-run-2026-06-30.md"
+            report = report_path.read_text(encoding="utf-8")
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(gate["status"], "fail")
+        self.assertTrue(gate["report"]["queue_parity"])
+        self.assertTrue(canonical_gate_v4_bytes(gate))
+        self.assertTrue(gate["report"]["generated"])
+        self.assertEqual(gate["source_outcomes"][0]["status"], "source_timeout")
+        self.assertIn("## 수집 저하 안내", report)
+        self.assertIn("source_timeout", report)
+
+    def test_live_gate_preserves_candidate_rejection_reason(self) -> None:
+        raw = json.loads(CONFIG.read_text(encoding="utf-8"))
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(output):
+            tmp_path = Path(tmp)
+            config_path = tmp_path / "config.json"
+            gate_path = tmp_path / "live_quality_gate.json"
+            raw["output_dir"] = str(tmp_path / "reports")
+            config_path.write_text(json.dumps(raw), encoding="utf-8")
+
+            with patch(
+                "recruit_crawler.live_run._candidate_gate_allows_partial_publication",
+                return_value=False,
+            ):
+                exit_code = cli_main(
+                    [
+                        "live-run",
+                        "--config",
+                        str(config_path),
+                        "--run-date",
+                        "2026-06-30",
+                        "--quality-gate-output",
+                        str(gate_path),
+                    ]
+                )
+            gate = json.loads(gate_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(exit_code, 1)
+        self.assertFalse(gate["report"]["generated"])
+        self.assertIn(
+            {
+                "severity": "fail",
+                "source_id": None,
+                "message": "live report candidate failed validation",
+            },
+            gate["findings"],
+        )
     def test_live_run_holds_one_year_over_profile_limit(self) -> None:
         raw = json.loads(CONFIG.read_text(encoding="utf-8"))
         raw["top_n"] = 5

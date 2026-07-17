@@ -67,6 +67,14 @@ _MESSAGES = {
     "source_collection_warning": "source collection warning recorded",
     "scheduled_report_rollback": "scheduled report rollback could not be confirmed",
     "runtime": "scheduled runtime failure",
+    "live_report_render": "live report rendering failed",
+    "live_report_candidate": "live report candidate failed validation",
+    "live_preflight_deadline": "live preflight deadline exceeded",
+    "live_collection": "live collection failed",
+    "live_publication_unknown": "live report publication state unknown",
+    "live_gate_indeterminate": "live quality gate output is indeterminate",
+    "live_gate_rolled_back": "live quality gate output failed; report rolled back",
+    "live_gate_publication_unknown": "live quality gate output failed; report publication state unknown",
     "schema": "pipeline schema versions are incompatible",
     "report_integrity": "report artifact integrity failed",
     "queue_parity": "report queue parity failed",
@@ -85,6 +93,7 @@ _RUNTIME_FAILURE_ALIASES = {
     "scheduled_quality_gate_output_failure": "runtime",
     "scheduled_report_publication_uncertain": "runtime",
     "scheduled_persistence_uncertain": "scheduled_db",
+    "live_report_render_failed": "live_report_render",
 }
 
 
@@ -591,6 +600,30 @@ def _v4_outcome_row(value: Any) -> tuple[dict[str, Any], bool]:
 
 
 def _v4_legacy_result(result: PipelineResultV4) -> PipelineResultV2:
+    outcome_by_source = {
+        item.source_id: item for item in result.source_outcomes
+    }
+
+    def error_codes_for(item: SourceMetricV4) -> tuple[str, ...]:
+        outcome = outcome_by_source.get(item.source_id)
+        outcome_code = (
+            getattr(outcome, "error_code", None)
+            if outcome is not None
+            else None
+        )
+        return tuple(
+            sorted(
+                {
+                    *item.error_codes,
+                    *(
+                        (outcome_code,)
+                        if outcome_code in _PUBLIC_SOURCE_ERROR_CODES
+                        else ()
+                    ),
+                }
+            )
+        )
+
     metrics = tuple(
         SourceMetricV2(
             source_id=item.source_id,
@@ -602,7 +635,7 @@ def _v4_legacy_result(result: PipelineResultV4) -> PipelineResultV2:
             normalized_emptied_field_count=item.normalized_emptied_field_count,
             verified_count=item.verified_count,
             manual_only_count=item.manual_only_count,
-            error_codes=item.error_codes,
+            error_codes=error_codes_for(item),
             duration_ms=0,
         )
         for item in result.source_metrics
