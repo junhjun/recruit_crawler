@@ -346,12 +346,20 @@ class ReportWriterTests(TestCase):
             row = f"| 1 | 지원 추천 | 공고 | 회사 | 서울 | 확인 필요 | 사유 | [열기](<{url}>) |\n".encode()
             self._assert_rejected_before_replace(_VALID_REPORT + row)
 
-    def test_publish_accepts_canonical_verified_detail_link(self):
-        url = "https://www.jobkorea.co.kr/Recruit/GI_Read/123"
-        row = f"| 1 | 지원 추천 | 공고 | 회사 | 서울 | 확인 필요 | 사유 | [열기](<{url}>) |\n".encode()
-        with TemporaryDirectory() as directory:
-            result = publish_report(
-                Path(directory), date(2026, 7, 14), _rendered(_VALID_REPORT + row), report_slug="daily"
-            )
-        self.assertIsNone(result.failure_code)
-        self.assertTrue(result.artifact.generated)
+    def test_publish_accepts_canonical_verified_detail_links(self):
+        for url in (
+            "https://www.jobkorea.co.kr/Recruit/GI_Read/123",
+            "https://www.saramin.co.kr/zf_user/jobs/relay/view-detail?rec_idx=54023849&rec_seq=0",
+        ):
+            row = (
+                f"| 1 | 지원 추천 | 공고 | 회사 | 서울 | 확인 필요 | 사유 | [열기](<{url}>) |\n"
+            ).encode()
+            with self.subTest(url=url), TemporaryDirectory() as directory:
+                result = publish_report(
+                    Path(directory),
+                    date(2026, 7, 14),
+                    _rendered(_VALID_REPORT + row),
+                    report_slug="daily",
+                )
+            self.assertIsNone(result.failure_code)
+            self.assertTrue(result.artifact.generated)

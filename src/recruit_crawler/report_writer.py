@@ -357,7 +357,7 @@ def validate_rendered_report(
     lines = content[:-1].split("\n")
     link_re = re.compile(r"(?<!\\)\[[^\]\n]*\]\(([^)\n]+)\)")
     source_patterns = (
-        ("saramin", re.compile(r"^/zf_user/jobs/(?:relay/view|relay/view-detail)$"), r"[?&]rec_idx=([0-9]+)"),
+        ("saramin", re.compile(r"^/zf_user/jobs/(?:relay/view|relay/view-detail)$"), r"(?:^|&)rec_idx=([0-9]+)"),
         ("jobkorea", re.compile(r"^/Recruit/GI_Read/([0-9]+)$"), None),
         ("wanted", re.compile(r"^/wd/([0-9]+)$"), None),
         ("jumpit", re.compile(r"^/position/([0-9]+)$"), None),
