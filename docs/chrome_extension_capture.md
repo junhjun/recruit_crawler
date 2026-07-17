@@ -1,6 +1,6 @@
 # Chrome Extension Capture
 
-This path is the practical V1 fallback collection route for Saramin, JobKorea, and reviewed manual/import sources.
+This path is the practical V1 fallback collection route for supported public sources and reviewed manual/import targets.
 It captures only job posting fields visible in the active Chrome tab and downloads a
 local JSON file. It does not read cookies, session tokens, auth headers, local
 storage, credentials, or unrelated account/profile data.
@@ -23,7 +23,7 @@ generate persisted diagnostics until the user clicks the button or popup command
 
 ## Capture
 
-1. Open a Saramin, JobKorea, or reviewed manual-capture target page in Chrome.
+1. Open a supported target page in Chrome: Saramin, JobKorea, Wanted, Rallit, or RocketPunch. LinkedIn remains available only for reviewed manual imports and historical regression coverage.
 2. Use either capture entry point:
    - Click the in-page "Recruit Capture" button at the lower-right of the page.
    - Or click the "Recruit Capture" extension icon, then click "Capture visible postings".

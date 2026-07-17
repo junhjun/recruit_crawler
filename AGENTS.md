@@ -7,7 +7,7 @@
 ├── README.md              # public project overview
 ├── AGENTS.md              # agent harness
 ├── TODO.md                # 앞으로 해야 할 일만
-├── docs/status.md          # 현재 기능 구현 현황의 단일 상태판
+├── docs/status.md          # generated human-facing status board
 ├── src/recruit_crawler/   # CLI, pipeline, parser, registry, source adapters
 ├── tests/                 # unittest 검증
 ├── fixtures/              # parser/import 회귀 샘플
@@ -21,8 +21,9 @@
 - 새 파일은 위 구조 중 가장 가까운 기존 디렉토리에 둔다.
 - 불필요한 새 최상위 디렉토리, 중복 문서, 임시 산출물은 만들지 않는다.
 - `README.md`는 허황되지 않은 영어 project overview만 둔다. 에이전트 하네스는 `AGENTS.md`, 사람용 backlog는 `TODO.md`에 둔다.
-- `docs/status.md`는 현재 기능 구현 현황의 단일 상태판이다. 직접 장문 편집하지 말고 `docs/status/features.json`을 갱신한 뒤 `status-report`로 재생성한다.
-- 진행상황 파악의 SSOT는 역할별로 나뉜다: 기능 상태는 `docs/status/features.json`, 사람이 볼 상태판은 생성물 `docs/status.md`, 미래 backlog는 `TODO.md`, 오래 유지할 결정은 `docs/decisions.md`, 런타임 세션 상태는 `.gjc/_session-*/`다.
+- `docs/status.md`는 `status-report`로 재생성하는 사람용 상태판이다. 직접 장문 편집하지 말고 `docs/status/features.json`을 갱신한 뒤 재생성한다.
+- 진행상황 파악의 SSOT는 역할별로 나뉜다: 기능 상태는 `docs/status/features.json`, 사람용 상태판은 생성물 `docs/status.md`, 미래 backlog는 `TODO.md`, 오래 유지할 결정은 `docs/decisions.md`, 런타임 세션 상태는 `.gjc/_session-*/`다.
+
 
 
 ## 세션 부트스트랩
@@ -58,6 +59,8 @@
 6. 관련 focused tests 또는 full `PYTHONPATH=src python3 -m unittest discover -s tests`
 7. `git diff --check`
 
+검증과 작업 규모는 비례시킨다. 상태 질문은 `status-report --brief`를 우선 사용하고, 작은 직접 변경은 focused verification으로 확인한다. 여러 planning/review lane은 cross-cutting 변경, 외부 위험이 있는 작업, 또는 사용자가 요청한 경우에만 사용한다. 전체 테스트와 live 실행은 변경 범위가 그 수준의 검증을 요구할 때만 수행한다.
+
 ## 진행상황 기록
 
 - `TODO.md`는 앞으로 해야 할 일만 담는다. 완료 항목은 제거하고 완료 기록 파일은 만들지 않는다.
@@ -65,10 +68,6 @@
 - `docs/decisions.md`는 오래 유지할 제품/운영 결정만 짧게 담는다. 작업 완료 로그나 세션 요약을 넣지 않는다.
 - `docs/archive/`는 사용하지 않는다. 새 archive 파일이나 폴더를 만들지 않는다.
 - `.gjc/`는 로컬 런타임 상태다. 일반 진행상황 파악에는 쓰지 않는다.
-
-## GitHub / PR 규칙
-
-- TBD
 
 ## 브라우저 검증 하네스
 

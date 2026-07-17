@@ -14,17 +14,30 @@ sys.path.insert(0, str(ROOT / "src"))
 from recruit_crawler.cli import main as cli_main
 from recruit_crawler.status_report import build_progress_brief, check_status_report, iter_feature_refs, load_feature_ledger, write_status_report
 
-KNOWN_ENTRYPOINT_PREFIXES = (
-    "recruit-crawler ",
-    "--",
-    "internal ",
-    "browser extension ",
-    "live-run ",
-)
 KNOWN_ENTRYPOINTS = {
     "browser-evidence",
+    "recruit-crawler browser-evidence",
     "capture-import",
     "config allowed_persisted_fields",
+    "recruit-crawler dry-run",
+    "recruit-crawler live-run",
+    "recruit-crawler source-status",
+    "recruit-crawler context-doctor",
+    "recruit-crawler capture-import",
+    "recruit-crawler capture-quality-gate",
+    "recruit-crawler feedback-add",
+    "recruit-crawler feedback-export",
+    "recruit-crawler scheduled-run --db-path",
+    "recruit-crawler scheduled-history",
+    "recruit-crawler scheduled-run",
+    "live-run --interview-missing-context",
+    "live-run --quality-gate-output",
+    "internal parse_candidates",
+    "internal rank_snapshots",
+    "--print-report",
+    "--context-doc",
+    "browser extension popup",
+    "README.md Codex 예약됨 onboarding",
 }
 
 
@@ -116,8 +129,6 @@ class RepositoryHarnessTests(unittest.TestCase):
         for feature in ledger["features"]:
             for entrypoint in feature["entrypoints"]:
                 with self.subTest(feature_id=feature["feature_id"], entrypoint=entrypoint):
-                    if any(entrypoint.startswith(prefix) for prefix in KNOWN_ENTRYPOINT_PREFIXES):
-                        continue
                     if entrypoint in KNOWN_ENTRYPOINTS:
                         continue
                     if "*" in entrypoint:

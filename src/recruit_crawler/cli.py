@@ -62,7 +62,7 @@ def build_parser() -> argparse.ArgumentParser:
     scheduled_run.add_argument("--context-doc", type=Path, action="append", help="personal context document; repeat for multiple .txt, .md, .pdf, or .docx inputs")
     scheduled_run.add_argument("--output-dir", type=Path, help="directory for scheduled Markdown reports")
     scheduled_run.add_argument("--quality-gate-output", type=Path, required=True, help="write scheduled-run quality gate JSON")
-    scheduled_run.add_argument("--db-path", type=Path, help="optional future SQLite persistence path; accepted for contract stability")
+    scheduled_run.add_argument("--db-path", type=Path, help="active SQLite persistence path for scheduled-run history and feedback")
     scheduled_history = subparsers.add_parser("scheduled-history", help="export persisted scheduled-run history")
     scheduled_history.add_argument("--db-path", type=Path, required=True)
     scheduled_history.add_argument("--json", action="store_true", help="print machine-readable run history")

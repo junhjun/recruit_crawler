@@ -104,9 +104,8 @@
 - Listing-card parser:
   - DOM의 `listing-card`, `job-card`, `job-item`, `company-list`, `data-index` block을 card 후보로 분리합니다.
   - card 내부 `job-title`/heading/`BodyM_Bold`에서 title을, `company-name`/company class/`BodyS secondary`에서 company를 추출합니다.
-  - card href가 있으면 `/en/jobs?selectedJobId=<id>` URL로 정규화합니다. 실제 browser QA에서 이 URL은 같은 jobs list 화면이지만 우측/상세 pane에 선택된 JD 본문을 엽니다.
-  - 선택 URL을 다시 no-human browser automation으로 로드해 `Responsibilities`, `Qualifications`, `Preferred Qualifications`, deadline을 detail pane에서 보강합니다.
-  - href가 없으면 listing URL과 card 순번+company+title 기반 synthetic id를 fallback으로 사용합니다.
+  - card에 직접 `/en/jobs/<id>` href가 있으면 해당 URL을 유지해 fetch하고 JD 본문을 보강합니다. 직접 href가 없을 때는 `/en/jobs?selectedJobId=<id>` URL을 candidate 식별용으로만 합성하며, detail fetch allowlist 밖이므로 검증된 JD 보강 없이 listing candidate로 남깁니다.
+  - 직접 href가 없으면 listing URL과 card 순번+company+title 기반 synthetic id를 fallback으로 사용합니다.
   - snippet, visible skill terms, location, experience tag를 구조화한 뒤 `candidate_include_keywords`/`candidate_exclude_keywords`로 필터링합니다.
 - 주의:
   - source notice override는 RocketPunch browser automation target에만 적용됩니다. public HTTP, API/manual/user-operated/OCR에는 적용하지 않습니다.
