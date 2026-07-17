@@ -13,6 +13,7 @@ from .report_policy import (
     report_byte_budget,
     validate_degradation_notice_capacity,
     validate_report_queue_capacity,
+    validate_report_summary_value,
     verified_link_url,
 )
 from .schemas import PipelineResultV2, REPORT_ARTIFACT_SCHEMA_VERSION, RenderedReportV2
@@ -120,25 +121,28 @@ def _reason(item: dict[str, Any]) -> str:
 
 
 def _row(
-    rank: int, item: dict[str, Any], command_mode: str
+    rank: int, item: dict[str, Any], command_mode: str, canaries: tuple[str, ...] = ()
 ) -> str:
     if len(str(rank)) > MAX_REPORT_RANK_DIGITS:
         raise ReportRenderError("report rank exceeds capacity")
     disposition = str(item.get("final_disposition", "manual_review"))
-    url = verified_link_url(
-        command_mode,
-        item.get("source_id", ""),
-        item.get("source_url"),
-        item.get("source_posting_id"),
-        item.get("source_detail_quality", "manual_only"),
+
+    def public_field(name: str, fallback: str) -> str:
+        value = item.get(name)
+        return fallback if _configured_canary(value, canaries) else (value or fallback)
+
+    source_url = item.get("source_url")
+    url = None if _configured_canary(source_url, canaries) else verified_link_url(
+        command_mode, item.get("source_id", ""), source_url,
+        item.get("source_posting_id"), item.get("source_detail_quality", "manual_only"),
     )
     link = f"[열기](<{url}>)" if url else "확인 필요"
     line = (
         f"| {rank} | {_escape(_PUBLIC_LABELS.get(disposition, '원문 확인 필요'))} | "
-        f"{_escape(item.get('title') or '검토 필요 공고')} | "
-        f"{_escape(item.get('company') or '확인 필요')} | "
-        f"{_escape(item.get('location') or '확인 필요')} | "
-        f"{_escape(item.get('deadline') or '확인 필요')} | {_escape(_reason(item))} | {link} |"
+        f"{_escape(public_field('title', '검토 필요 공고'))} | "
+        f"{_escape(public_field('company', '확인 필요'))} | "
+        f"{_escape(public_field('location', '확인 필요'))} | "
+        f"{_escape(public_field('deadline', '확인 필요'))} | {_escape(_reason(item))} | {link} |"
     )
     if len(line.encode("utf-8")) > MAX_REPORT_ROW_BYTES:
         raise ReportRenderError("report row exceeds capacity")
@@ -157,22 +161,25 @@ def _render_v2(result: PipelineResultV2, *, private_canaries=()) -> RenderedRepo
     projected = project_pipeline_result(result)
     queue = tuple(projected["report_queue"])
     notices = _safe_degradation_tokens(result, projected.get("gate_sources", ()), canaries)
-    # Both counts and the whole budget are checked before a Markdown string is built.
+    summary = projected["summary"]
+    # Counts, summary numerals, and the whole budget are checked before Markdown.
     try:
         validate_report_queue_capacity(len(queue))
         validate_degradation_notice_capacity(len(notices))
+        summary_values = {
+            key: validate_report_summary_value(summary.get(key, 0))
+            for key in ("collected", "source_rejected", "duplicates_removed")
+        }
         budget = report_byte_budget(len(queue), len(notices))
     except ValueError as exc:
         raise ReportRenderError(str(exc)) from exc
-
-    summary = projected["summary"]
     lines = [
         f"# 채용 추천 리포트 — {_escape(result.run_date.isoformat())}",
         "",
         "## 한눈에 보기",
-        f"- 수집: {summary.get('collected', 0)}",
-        f"- 상세 거부: {summary.get('source_rejected', 0)}",
-        f"- 중복 제거: {summary.get('duplicates_removed', 0)}",
+        f"- 수집: {summary_values['collected']}",
+        f"- 상세 거부: {summary_values['source_rejected']}",
+        f"- 중복 제거: {summary_values['duplicates_removed']}",
         "",
         "## 지원/검토",
         "| " + " | ".join(REPORT_TABLE_COLUMNS) + " |",
@@ -180,7 +187,7 @@ def _render_v2(result: PipelineResultV2, *, private_canaries=()) -> RenderedRepo
     ]
     command_mode = str(getattr(getattr(result, "command_mode", ""), "value", result.command_mode))
     for rank, item in enumerate(queue, start=1):
-        lines.append(_row(rank, item, command_mode))
+        lines.append(_row(rank, item, command_mode, canaries))
     if notices:
         lines.extend(("", "## 수집 저하 안내", "- 일부 활성 소스의 수집이 완료되지 않았습니다. Gate 상태는 fail입니다."))
         lines.extend(

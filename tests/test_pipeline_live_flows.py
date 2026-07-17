@@ -20,7 +20,10 @@ from recruit_crawler.cli import main as cli_main
 from recruit_crawler.config import ConfigError, load_config
 from recruit_crawler.gate import build_gate_v2
 from recruit_crawler.gate import build_gate_v4
-from recruit_crawler.live_run import _run_live_run_at_service_boundary
+from recruit_crawler.live_run import (
+    _publish_live_report,
+    _run_live_run_at_service_boundary,
+)
 from recruit_crawler.pipeline import (
     CollectionBatch,
     build_pipeline_result_v2,
@@ -42,6 +45,7 @@ from recruit_crawler.schemas import (
     SourceExecutionOutcomeV1,
 )
 from recruit_crawler.summarizer import render_report_v2
+from recruit_crawler.report_policy import MAX_REPORT_ROWS
 
 CONFIG = ROOT / "config" / "sample_config.json"
 
@@ -211,6 +215,48 @@ class PipelineLiveFlowTests(unittest.TestCase):
             )
             self.assertEqual(publication.failure_code, "runtime_deadline_exceeded")
             self.assertFalse((Path(tmp) / "deadline-2026-06-30.md").exists())
+    def test_live_v4_capacity_failure_skips_builders_and_publication(self) -> None:
+        raw = json.loads(CONFIG.read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            raw["fixture_path"] = str(tmp_path / "postings.json")
+            raw["output_dir"] = str(tmp_path / "reports")
+            config_path = tmp_path / "config.json"
+            config_path.write_text(json.dumps(raw), encoding="utf-8")
+            (tmp_path / "postings.json").write_text("[]", encoding="utf-8")
+            config = load_config(config_path, allow_real_sources=True)
+            result = run_live_run(config, date(2026, 6, 30))
+            actual_projection = project_pipeline_result(result)
+            overflow_projection = {
+                **actual_projection,
+                "report_queue": tuple({} for _ in range(MAX_REPORT_ROWS + 1)),
+            }
+            with (
+                patch(
+                    "recruit_crawler.projection.project_pipeline_result",
+                    return_value=overflow_projection,
+                ),
+                patch("recruit_crawler.summarizer._escape") as escape,
+                patch("recruit_crawler.summarizer._row") as render_row,
+            ):
+                publication = _publish_live_report(config, result.run_date, result)
+
+            gate = build_gate_v4(
+                result,
+                enabled_source_ids=("fixture",),
+                projection=actual_projection,
+                report_artifact=publication.artifact,
+            )
+            report_path = (
+                Path(config.output_dir)
+                / f"recruiting-live-run-{result.run_date.isoformat()}.md"
+            )
+            self.assertFalse(publication.artifact.generated)
+            self.assertEqual(publication.failure_code, "render_failed")
+            self.assertFalse(report_path.exists())
+            self.assertEqual(gate["status"], "fail")
+            escape.assert_not_called()
+            render_row.assert_not_called()
     def test_live_run_does_not_publish_adapter_exception_details(self) -> None:
         class FailingAdapter:
             def collect(self) -> list[PostingCandidate]:
@@ -571,6 +617,53 @@ class PipelineLiveFlowTests(unittest.TestCase):
                 self.assertIn("Report written: not generated", output.getvalue())
                 self.assertNotIn("# 채용 추천 리포트", output.getvalue())
 
+    def test_indeterminate_replace_keeps_attributable_candidate_and_fails_gate(self) -> None:
+        raw = json.loads(CONFIG.read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            config_path = tmp_path / "config.json"
+            gate_path = tmp_path / "live_quality_gate.json"
+            report_path = tmp_path / "reports" / "recruiting-live-run-2026-06-30.md"
+            raw["fixture_path"] = str(tmp_path / "postings.json")
+            raw["output_dir"] = str(tmp_path / "reports")
+            config_path.write_text(json.dumps(raw), encoding="utf-8")
+            (tmp_path / "postings.json").write_text("[]", encoding="utf-8")
+
+            def leave_candidate(output_dir, run_date, rendered, **kwargs):
+                report_path.parent.mkdir(parents=True, exist_ok=True)
+                report_path.write_bytes(rendered.markdown_bytes)
+                return ReportPublicationResultV1(
+                    false_report_artifact(), "fsync_failed_post_replace", "indeterminate"
+                )
+
+            with patch(
+                "recruit_crawler.live_run.persist_rendered_report",
+                side_effect=leave_candidate,
+            ), patch(
+                "recruit_crawler.live_run._rollback_report",
+                return_value=False,
+            ):
+                output = io.StringIO()
+                with redirect_stdout(output), redirect_stderr(output):
+                    exit_code = cli_main(
+                        [
+                            "live-run", "--config", str(config_path),
+                            "--run-date", "2026-06-30",
+                            "--quality-gate-output", str(gate_path),
+                        ]
+                    )
+            gate = json.loads(gate_path.read_text(encoding="utf-8"))
+            candidate_sha = hashlib.sha256(report_path.read_bytes()).hexdigest()
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(gate["status"], "fail")
+        self.assertTrue(gate["report"]["generated"])
+        self.assertEqual(
+            gate["report"]["content_sha256"],
+            candidate_sha,
+        )
+        self.assertIn("publication state unknown", output.getvalue())
+        self.assertIn("Report written: publication state unknown", output.getvalue())
     def test_partial_report_redacts_normalized_casefolded_canary(self) -> None:
         config = load_config(CONFIG)
         canary = "Café"

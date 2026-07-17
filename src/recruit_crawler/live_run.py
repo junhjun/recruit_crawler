@@ -7,6 +7,7 @@ import json
 import socket
 import threading
 import sys
+import hashlib
 import time
 from datetime import date
 from pathlib import Path
@@ -387,7 +388,11 @@ def handle_live_run(
                         private_canaries=configured_canaries,
                         runtime_context=runtime_context,
                     )
-                    if publication.durability == "published":
+                    if (
+                        publication.durability == "published"
+                        and publication.failure_code is None
+                        and publication.artifact.generated
+                    ):
                         report_published = True
                         artifact = publication.artifact
                         gate = _build_live_gate(
@@ -403,20 +408,69 @@ def handle_live_run(
                             configured_canaries=configured_canaries,
                         )
                     else:
-                        artifact = false_report_artifact()
-                        gate = _build_live_gate(
-                            result,
-                            enabled_source_ids=(
-                                source.source_id
-                                for source in config.sources
-                                if source.enabled
-                            ),
-                            context_status=preflight["context_status"],
-                            runtime_failures=("live_report_publication_failed",),
-                            report_artifact=artifact,
-                            projection=projection,
-                            configured_canaries=configured_canaries,
+                        candidate_sha = (
+                            rendered.content_sha256
+                            if rendered is not None
+                            else None
                         )
+                        candidate_attributable = False
+                        candidate_absent = False
+                        if candidate_sha is not None:
+                            try:
+                                candidate_attributable = (
+                                    report_path.is_file()
+                                    and hashlib.sha256(report_path.read_bytes()).hexdigest()
+                                    == candidate_sha
+                                )
+                                candidate_absent = not report_path.exists()
+                            except OSError:
+                                candidate_attributable = False
+                        rollback_ok = candidate_absent
+                        if (
+                            not rollback_ok
+                            and report_preimage is not None
+                            and candidate_sha is not None
+                        ):
+                            rollback_ok = _rollback_report(
+                                report_path,
+                                report_preimage,
+                                candidate_sha,
+                                runtime_context=runtime_context,
+                            )
+                        if rollback_ok:
+                            artifact = false_report_artifact()
+                            gate = _build_live_gate(
+                                result,
+                                enabled_source_ids=(
+                                    source.source_id
+                                    for source in config.sources
+                                    if source.enabled
+                                ),
+                                context_status=preflight["context_status"],
+                                runtime_failures=("live_report_publication_failed",),
+                                report_artifact=artifact,
+                                projection=projection,
+                                configured_canaries=configured_canaries,
+                            )
+                        else:
+                            report_unknown = True
+                            artifact = candidate if candidate_attributable else false_report_artifact()
+                            gate = _live_failure_gate(
+                                _build_live_gate(
+                                    result,
+                                    enabled_source_ids=(
+                                        source.source_id
+                                        for source in config.sources
+                                        if source.enabled
+                                    ),
+                                    context_status=preflight["context_status"],
+                                    runtime_failures=("live_report_publication_failed",),
+                                    report_artifact=artifact,
+                                    projection=projection,
+                                    configured_canaries=configured_canaries,
+                                ),
+                                "live report publication state unknown",
+                            )
         if args.quality_gate_output:
             gate_outcome = _write_gate_output_at_service_boundary(
                 args.quality_gate_output,

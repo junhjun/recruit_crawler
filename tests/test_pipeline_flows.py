@@ -750,6 +750,33 @@ class PipelineFlowTests(unittest.TestCase):
                 self.assertIsNone(
                     verified_link_url("scheduled-run", source_id, source_url, posting_id, "verified")
                 )
+    def test_v2_and_v4_gates_preserve_report_and_source_axes(self) -> None:
+        config = load_config(CONFIG)
+        result = run_dry_run(config, date(2026, 6, 30))
+        projection, _report, artifact, v2_gate = _materialize(
+            result, config, "v2-v4-parity"
+        )
+        outcome = SourceExecutionOutcomeV1(
+            "fixture", True, True, "success", None, 0
+        )
+        v4_result = _as_pipeline_v4(result, (outcome,))
+        v4_gate = build_gate_v4(
+            v4_result,
+            enabled_source_ids=("fixture",),
+            projection=projection,
+            report_artifact=artifact,
+        )
+
+        self.assertEqual(v4_gate["status"], v2_gate["status"])
+        self.assertEqual(v4_gate["report"], v2_gate["report"])
+        self.assertEqual(v4_gate["summary"], v2_gate["summary"])
+        self.assertEqual(v4_gate["sources"], v2_gate["sources"])
+        self.assertEqual(v4_gate["findings"], v2_gate["findings"])
+        self.assertEqual(v4_gate["source_outcomes"][0]["elapsed_ms"], 0)
+        self.assertEqual(
+            render_report_v2(v4_result).markdown_bytes,
+            render_report_v2(result).markdown_bytes,
+        )
     def test_canonical_gate_v4_is_fail_closed_on_v4_axis_and_timing(self) -> None:
         config = load_config(CONFIG)
         result = run_dry_run(config, date(2026, 6, 30))

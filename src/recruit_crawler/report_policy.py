@@ -17,9 +17,28 @@ MAX_REPORT_RANK_DIGITS = len(str(MAX_REPORT_ROWS))
 MAX_DEGRADATION_NOTICES = 64
 MAX_DEGRADATION_NOTICE_BYTES = 512
 MAX_REPORT_ROW_BYTES = 4096
-# Title, summary, table headings and every permitted degradation notice.
-MAX_REPORT_FIXED_BYTES = 256 + MAX_DEGRADATION_NOTICES * MAX_DEGRADATION_NOTICE_BYTES
-MAX_REPORT_BYTES = MAX_REPORT_FIXED_BYTES + MAX_REPORT_ROWS * MAX_REPORT_ROW_BYTES
+MAX_REPORT_SUMMARY_DIGITS = 20
+MAX_REPORT_SUMMARY_VALUE = 10**MAX_REPORT_SUMMARY_DIGITS - 1
+
+_MAX_SUMMARY_NUMBER = "9" * MAX_REPORT_SUMMARY_DIGITS
+_MAX_FIXED_REPORT_TEXT = (
+    "# 채용 추천 리포트 — 9999-99-99\n\n"
+    "## 한눈에 보기\n"
+    f"- 수집: {_MAX_SUMMARY_NUMBER}\n"
+    f"- 상세 거부: {_MAX_SUMMARY_NUMBER}\n"
+    f"- 중복 제거: {_MAX_SUMMARY_NUMBER}\n\n"
+    "## 지원/검토\n"
+    "| " + " | ".join(REPORT_TABLE_COLUMNS) + " |\n"
+    "| " + " | ".join("---" for _ in REPORT_TABLE_COLUMNS) + " |\n\n"
+    "## 수집 저하 안내\n"
+    "- 일부 활성 소스의 수집이 완료되지 않았습니다. Gate 상태는 fail입니다.\n"
+)
+MAX_REPORT_FIXED_BYTES = len(_MAX_FIXED_REPORT_TEXT.encode("utf-8"))
+MAX_REPORT_BYTES = (
+    MAX_REPORT_FIXED_BYTES
+    + MAX_DEGRADATION_NOTICES * MAX_DEGRADATION_NOTICE_BYTES
+    + MAX_REPORT_ROWS * MAX_REPORT_ROW_BYTES
+)
 # Compatibility aliases for provisional report-policy callers.
 REPORT_MAX_QUEUE_ROWS = MAX_REPORT_ROWS
 REPORT_MAX_NOTICE_ROWS = MAX_DEGRADATION_NOTICES
@@ -74,12 +93,17 @@ def validate_degradation_notice_capacity(notice_count: int) -> None:
         raise ValueError("report notice count must be a non-negative integer")
     if notice_count > MAX_DEGRADATION_NOTICES:
         raise ValueError("report degradation notices exceed capacity")
+def validate_report_summary_value(value: object) -> int:
+    if type(value) is not int or value < 0 or value > MAX_REPORT_SUMMARY_VALUE:
+        raise ValueError("report summary value exceeds capacity")
+    return value
+
 
 
 def report_byte_budget(queue_length: int, notice_count: int) -> int:
     validate_report_queue_capacity(queue_length)
     validate_degradation_notice_capacity(notice_count)
-    return 256 + notice_count * MAX_DEGRADATION_NOTICE_BYTES + queue_length * MAX_REPORT_ROW_BYTES
+    return MAX_REPORT_FIXED_BYTES + notice_count * MAX_DEGRADATION_NOTICE_BYTES + queue_length * MAX_REPORT_ROW_BYTES
 
 
 def _canonical_rallit_slug(raw_slug: str) -> Optional[str]:

@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Callable, Iterable, Literal, Optional
+from urllib.parse import urlsplit
 
 from .projection import false_report_artifact
 from .report_policy import (
@@ -19,9 +20,10 @@ from .report_policy import (
     MAX_REPORT_ROW_BYTES,
     MAX_REPORT_ROWS,
     report_byte_budget,
+    validate_report_summary_value,
 )
 from .schemas import REPORT_ARTIFACT_SCHEMA_VERSION, ReportArtifactV2, RenderedReportV2
-
+from .report_policy import verified_link_url
 
 @dataclass(frozen=True, slots=True)
 class RuntimeBudgetV1:
@@ -353,28 +355,138 @@ def validate_rendered_report(
     if not content.endswith("\n"):
         raise ValueError("rendered markdown must end with LF")
     lines = content[:-1].split("\n")
-    table_rows = 0
-    in_table = False
-    notice_lines: list[str] = []
-    in_notices = False
-    for line in lines:
-        if line.startswith("## 수집 저하 안내"):
-            in_notices = True
-            in_table = False
-            continue
-        if in_notices:
-            if line.startswith("- 소스 "):
-                notice_lines.append(line)
-            continue
-        if line.startswith("| "):
-            if line.startswith("| ---"):
-                in_table = True
+    link_re = re.compile(r"(?<!\\)\[[^\]\n]*\]\(([^)\n]+)\)")
+    source_patterns = (
+        ("saramin", re.compile(r"^/zf_user/jobs/(?:relay/view|relay/view-detail)$"), r"[?&]rec_idx=([0-9]+)"),
+        ("jobkorea", re.compile(r"^/Recruit/GI_Read/([0-9]+)$"), None),
+        ("wanted", re.compile(r"^/wd/([0-9]+)$"), None),
+        ("jumpit", re.compile(r"^/position/([0-9]+)$"), None),
+        ("rocketpunch", re.compile(r"^/en/jobs/([0-9]+)$"), None),
+        ("rallit", re.compile(r"^/positions/([0-9]+)(?:/.*)?$"), None),
+        ("fixture", re.compile(r"^/([A-Za-z0-9][A-Za-z0-9._-]*)$"), None),
+    )
+    def canonical_link(value: str) -> bool:
+        try:
+            parsed = urlsplit(value)
+        except ValueError:
+            return False
+        for source_id, path_re, query_re in source_patterns:
+            if parsed.hostname is None:
                 continue
-            if in_table:
-                table_rows += 1
+            if source_id == "saramin":
+                match = path_re.fullmatch(parsed.path)
+                posting_match = query_re and re.search(query_re, parsed.query)
+                posting_id = posting_match.group(1) if posting_match else ""
+            else:
+                match = path_re.fullmatch(parsed.path)
+                posting_id = match.group(1) if match and match.lastindex else ""
+            if not match or posting_id == "":
+                continue
+            return verified_link_url(
+                "scheduled-run", source_id, value, posting_id, "verified"
+            ) == value
+        return False
+    def has_active_markdown_link(value: str) -> bool:
+        for index, character in enumerate(value):
+            if character != "[":
+                continue
+            backslashes = 0
+            index -= 1
+            while index >= 0 and value[index] == "\\":
+                backslashes += 1
+                index -= 1
+            if backslashes % 2 == 0:
+                return True
+        return False
+
+    def validate_row_links(line: str) -> None:
+        cells = line[2:-2].split(" | ")
+        for index, cell in enumerate(cells):
+            if index < 7:
+                if (
+                    has_active_markdown_link(cell)
+                    or "<" in cell
+                    or ">" in cell
+                    or re.search(r"https?://", cell, re.IGNORECASE)
+                ):
+                    raise ValueError("markdown links are forbidden in non-link cells")
+                continue
+            if cell == "확인 필요":
+                continue
+            match = link_re.fullmatch(cell)
+            if match is None or cell != f"[열기]({match.group(1)})":
+                raise ValueError("rendered report link is not canonical")
+            target = match.group(1)
+            if target.startswith("<") and target.endswith(">"):
+                target = target[1:-1]
+            if not canonical_link(target):
+                raise ValueError("rendered report link is not canonical")
+    header = "| " + " | ".join(("순위", "판정", "공고", "회사", "지역", "마감", "사유", "링크")) + " |"
+    separator = "| " + " | ".join("---" for _ in range(8)) + " |"
+    title_re = re.compile(r"^# 채용 추천 리포트 — \d{4}-\d{2}-\d{2}$")
+    summary_re = tuple(re.compile(pattern) for pattern in (
+        r"^- 수집: [0-9]+$", r"^- 상세 거부: [0-9]+$", r"^- 중복 제거: [0-9]+$"
+    ))
+    row_re = re.compile(r"^\| ([1-9][0-9]*) \| .+ \| .+ \| .+ \| .+ \| .+ \| .+ \| .+ \|$")
+    notice_re = re.compile(
+        r"^- 소스 (?:`[^`\n]+`|일부 소스): "
+        r"(?:collection_error|collection_failed|source_timeout|"
+        r"aggregate_budget_exhausted|수집 결과 없음|수집 실패)$"
+    )
+    def unescaped_pipe_count(line: str) -> int:
+        count = 0
+        escaped = False
+        for character in line:
+            if character == "\\":
+                escaped = not escaped
+            else:
+                if character == "|" and not escaped:
+                    count += 1
+                escaped = False
+        return count
+
+    if len(lines) < 10 or not title_re.fullmatch(lines[0]):
+        raise ValueError("rendered report title is malformed")
+    if lines[1] or lines[2] != "## 한눈에 보기":
+        raise ValueError("rendered report summary section is malformed")
+    if any(not pattern.fullmatch(lines[index]) for index, pattern in zip((3, 4, 5), summary_re)):
+        raise ValueError("rendered report summary section is malformed")
+    try:
+        for index in (3, 4, 5):
+            validate_report_summary_value(int(lines[index].rsplit(": ", 1)[1]))
+    except (ValueError, IndexError) as exc:
+        raise ValueError("rendered report summary exceeds capacity") from exc
+    if lines[6] or lines[7] != "## 지원/검토":
+        raise ValueError("rendered report section is malformed")
+    if lines[8] != header or lines[9] != separator:
+        raise ValueError("rendered report table header is malformed")
+    table_end = 10
+    ranks = []
+    while table_end < len(lines) and lines[table_end].startswith("|"):
+        line = lines[table_end]
+        match = row_re.fullmatch(line)
+        if match is None or unescaped_pipe_count(line) != 9:
+            raise ValueError("rendered report table row is malformed")
+        validate_row_links(line)
+        ranks.append(int(match.group(1)))
+        table_end += 1
+    if ranks != list(range(1, len(ranks) + 1)):
+        raise ValueError("rendered report ranks are not contiguous")
+    table_rows = len(ranks)
+    tail = lines[table_end:]
+    if tail:
+        if len(tail) < 3 or tail[:2] != ["", "## 수집 저하 안내"]:
+            raise ValueError("rendered degradation block is malformed")
+        if tail[2] != "- 일부 활성 소스의 수집이 완료되지 않았습니다. Gate 상태는 fail입니다.":
+            raise ValueError("rendered degradation block is malformed")
+        notice_lines = tail[3:]
+        if not notice_lines or any(not notice_re.fullmatch(line) for line in notice_lines):
+            raise ValueError("rendered degradation notice is malformed")
+    else:
+        notice_lines = []
     if table_rows > MAX_REPORT_ROWS:
         raise ValueError("rendered report table exceeds capacity")
-    if any(len(line.encode("utf-8")) > MAX_REPORT_ROW_BYTES for line in lines if line.startswith("| ")):
+    if any(len(line.encode("utf-8")) > MAX_REPORT_ROW_BYTES for line in lines[10:table_end]):
         raise ValueError("rendered report row exceeds capacity")
     if len(notice_lines) > MAX_DEGRADATION_NOTICES:
         raise ValueError("rendered degradation notices exceed capacity")
@@ -520,6 +632,7 @@ def publish_report(
             return reconcile_result(
                 "runtime_deadline_exceeded",
                 "interrupted",
+                indeterminate=True,
                 interrupted=True,
             )
         return reconcile_result("write_failed_pre_replace", "candidate_staged")
@@ -535,6 +648,7 @@ def publish_report(
         return reconcile_result(
             "runtime_deadline_exceeded",
             "interrupted",
+            indeterminate=True,
             interrupted=True,
         )
 
