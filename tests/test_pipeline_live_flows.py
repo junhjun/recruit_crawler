@@ -691,5 +691,77 @@ class PipelineLiveFlowTests(unittest.TestCase):
         self.assertTrue(all(row["duration_ms"] == 0 for row in gate["sources"]))
         self.assertTrue(all(row["elapsed_ms"] == 0 for row in gate["source_outcomes"]))
 
+    def test_live_gate_output_failure_rolls_back_partial_report(self) -> None:
+        raw = json.loads(CONFIG.read_text(encoding="utf-8"))
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(output):
+            tmp_path = Path(tmp)
+            config_path = tmp_path / "config.json"
+            gate_path = tmp_path / "live_quality_gate.json"
+            report_path = tmp_path / "reports" / "recruiting-live-run-2026-06-30.md"
+            raw["fixture_path"] = str(tmp_path / "postings.json")
+            raw["output_dir"] = str(tmp_path / "reports")
+            config_path.write_text(json.dumps(raw), encoding="utf-8")
+            (tmp_path / "postings.json").write_text("[]", encoding="utf-8")
+            failed_gate_write = type("Outcome", (), {"successful": False})()
+            with patch(
+                "recruit_crawler.live_run._write_gate_output_at_service_boundary",
+                return_value=failed_gate_write,
+            ):
+                exit_code = cli_main(
+                    [
+                        "live-run",
+                        "--config",
+                        str(config_path),
+                        "--run-date",
+                        "2026-06-30",
+                        "--quality-gate-output",
+                        str(gate_path),
+                    ]
+                )
+            report_exists = report_path.exists()
+            gate_exists = gate_path.exists()
+        self.assertEqual(exit_code, 1)
+        self.assertFalse(report_exists)
+        self.assertFalse(gate_exists)
+        self.assertIn("Report written: not generated", output.getvalue())
+
+    def test_live_gate_failure_reports_unknown_when_rollback_is_unconfirmed(self) -> None:
+        raw = json.loads(CONFIG.read_text(encoding="utf-8"))
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(output):
+            tmp_path = Path(tmp)
+            config_path = tmp_path / "config.json"
+            gate_path = tmp_path / "live_quality_gate.json"
+            report_path = tmp_path / "reports" / "recruiting-live-run-2026-06-30.md"
+            raw["fixture_path"] = str(tmp_path / "postings.json")
+            raw["output_dir"] = str(tmp_path / "reports")
+            config_path.write_text(json.dumps(raw), encoding="utf-8")
+            (tmp_path / "postings.json").write_text("[]", encoding="utf-8")
+            failed_gate_write = type("Outcome", (), {"successful": False})()
+            with (
+                patch(
+                    "recruit_crawler.live_run._write_gate_output_at_service_boundary",
+                    return_value=failed_gate_write,
+                ),
+                patch("recruit_crawler.live_run._rollback_report", return_value=False),
+            ):
+                exit_code = cli_main(
+                    [
+                        "live-run",
+                        "--config",
+                        str(config_path),
+                        "--run-date",
+                        "2026-06-30",
+                        "--quality-gate-output",
+                        str(gate_path),
+                    ]
+                )
+            report_exists = report_path.exists()
+            gate_exists = gate_path.exists()
+        self.assertEqual(exit_code, 1)
+        self.assertTrue(report_exists)
+        self.assertFalse(gate_exists)
+        self.assertIn("Report written: publication state unknown", output.getvalue())
 if __name__ == "__main__":
     unittest.main()

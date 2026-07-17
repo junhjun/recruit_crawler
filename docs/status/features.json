@@ -167,7 +167,7 @@
       ],
       "test_refs": [
         "tests/test_pipeline_flows.py::test_unknown_deadline_is_uncertain_not_expired",
-        "tests/test_pipeline_flows.py::test_each_selected_posting_has_actionable_report_fields"
+        "tests/test_pipeline_flows.py::test_each_report_posting_has_public_safe_report_fields"
       ],
       "docs_refs": [
         "docs/source_search_logic.md"

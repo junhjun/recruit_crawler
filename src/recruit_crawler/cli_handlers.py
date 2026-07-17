@@ -4,6 +4,7 @@ import argparse
 import json
 from datetime import date
 from typing import Optional
+import unicodedata
 
 from .browser_evidence import build_browser_evidence, write_browser_evidence
 from .capture_import import (
@@ -27,10 +28,26 @@ from .user_context import UserContextImportError
 from .summarizer import render_report_v2
 
 
+def _configured_private_canaries(config) -> tuple[str, ...]:
+    values: list[str] = []
+    seen: set[str] = set()
+    for canary in (
+        *getattr(getattr(config, "profile", None), "private_canaries", ()),
+        *getattr(getattr(config, "user_context", None), "private_canaries", ()),
+    ):
+        if not isinstance(canary, str) or not canary:
+            continue
+        normalized = unicodedata.normalize("NFC", canary).casefold()
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            values.append(canary)
+    return tuple(values)
+
 def _render_result(config, result, *, report_slug: str):
     projection = project_pipeline_result(result)
+    private_canaries = _configured_private_canaries(config)
     try:
-        rendered = render_report_v2(result)
+        rendered = render_report_v2(result, private_canaries=private_canaries)
     except Exception:
         publication = ReportPublicationResultV1(
             false_report_artifact(), "render_failed", "not_published"
@@ -41,6 +58,7 @@ def _render_result(config, result, *, report_slug: str):
             result.run_date,
             rendered,
             report_slug=report_slug,
+            private_canaries=private_canaries,
         )
     return projection, publication
 

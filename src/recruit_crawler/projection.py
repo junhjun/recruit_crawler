@@ -86,6 +86,14 @@ _MANUAL_REASONS = (
     "education_unknown",
     "experience_unknown",
 )
+_REPORT_LABEL_PRIORITY = {
+    "apply": 0,
+    "hold": 1,
+    "manual_review": 2,
+    "low_priority": 3,
+    "exclude": 4,
+    "expired": 5,
+}
 
 
 def _iso(value: Any) -> Any:
@@ -290,15 +298,6 @@ def _summary(result: PipelineResultV2, assessments: Sequence[AssessmentV2]) -> d
     by_disposition = Counter(item.disposition for item in assessments)
     accepted = sum(int(metric.accepted_count) for metric in result.source_metrics)
     actionable = by_disposition["apply"] + by_disposition["hold"]
-    # Compute displayed buckets from the single merged queue, never by slicing
-    # each disposition independently.
-    action_queue = [
-        item for item in sorted(assessments, key=_sort_key) if item.disposition in _ACTION_DISPOSITIONS
-    ][: max(int(result.top_n), 0)]
-    shown_apply = sum(item.disposition == "apply" for item in action_queue)
-    shown_hold = sum(item.disposition == "hold" for item in action_queue)
-    manual_total = by_disposition["manual_review"]
-    shown_manual = min(max(int(result.manual_review_n), 0), manual_total)
     return {
         "collected": int(result.collected_count),
         "source_rejected": int(result.source_rejected_count),
@@ -307,17 +306,17 @@ def _summary(result: PipelineResultV2, assessments: Sequence[AssessmentV2]) -> d
         "deduplicated": max(0, accepted - int(result.duplicates_removed)),
         "expired": by_disposition["expired"],
         "exclude": by_disposition["exclude"],
-        "manual_review_total": manual_total,
+        "manual_review_total": by_disposition["manual_review"],
         "apply_total": by_disposition["apply"],
         "hold_total": by_disposition["hold"],
         "low_priority_total": by_disposition["low_priority"],
         "actionable_total": actionable,
-        "displayed_apply": shown_apply,
-        "displayed_hold": shown_hold,
-        "suppressed_apply": by_disposition["apply"] - shown_apply,
-        "suppressed_hold": by_disposition["hold"] - shown_hold,
-        "displayed_manual": shown_manual,
-        "suppressed_manual": manual_total - shown_manual,
+        "displayed_apply": by_disposition["apply"],
+        "displayed_hold": by_disposition["hold"],
+        "suppressed_apply": 0,
+        "suppressed_hold": 0,
+        "displayed_manual": by_disposition["manual_review"],
+        "suppressed_manual": 0,
     }
 
 
@@ -373,29 +372,56 @@ def _report_queue_item(
     return item
 
 
-def project_pipeline_result(result: PipelineResultV2) -> dict[str, Any]:
-    """Build all reusable projection products in one deterministic pass."""
-    assessments = tuple(result.all_assessments)
-    ordered = tuple(sorted(assessments, key=_sort_key))
-    command_mode = getattr(result.command_mode, "value", result.command_mode)
-    public = project_public_assessments(
-        assessments,
-        command_mode=str(command_mode),
+def _report_sort_key(item: Mapping[str, Any]) -> tuple[Any, ...]:
+    disposition = str(item.get("final_disposition", _MANUAL_DISPOSITION))
+    score = item.get("score", 0)
+    if type(score) is not int:
+        score = 0
+    deadline = item.get("deadline")
+    return (
+        _REPORT_LABEL_PRIORITY.get(disposition, _REPORT_LABEL_PRIORITY[_MANUAL_DISPOSITION]),
+        -score,
+        deadline is None,
+        deadline or "",
+        item.get("recommendation_id") or "unknown-recommendation",
+        item.get("posting_key") or "unknown-posting",
     )
-    actions = tuple(
+
+def project_pipeline_result(result: PipelineResultV2) -> dict[str, Any]:
+    """Build reusable public projections with report ordering independent of input."""
+    assessments = tuple(result.all_assessments)
+    command_mode = getattr(result.command_mode, "value", result.command_mode)
+    public = project_public_assessments(assessments, command_mode=str(command_mode))
+    report_queue = tuple(
+        sorted(
+            (
+                _report_queue_item(item, command_mode=str(command_mode))
+                for item in assessments
+            ),
+            key=_report_sort_key,
+        )
+    )
+    keys = tuple(_report_sort_key(item) for item in report_queue)
+    if len(set(keys)) != len(keys):
+        raise ValueError("public report ordering collision")
+    # Legacy consumers retain the historical score-first slice shape.  Reports
+    # consume only the complete report_queue above.
+    legacy_ordered = tuple(sorted(assessments, key=_sort_key))
+    action_queue = tuple(
         _report_queue_item(item, command_mode=str(command_mode))
-        for item in ordered
+        for item in legacy_ordered
         if item.disposition in _ACTION_DISPOSITIONS
     )[: max(int(result.top_n), 0)]
-    manual = tuple(
+    manual_queue = tuple(
         _report_queue_item(item, command_mode=str(command_mode))
-        for item in ordered
+        for item in legacy_ordered
         if item.disposition == _MANUAL_DISPOSITION
     )[: max(int(result.manual_review_n), 0)]
     return {
         "assessments": public,
-        "action_queue": actions,
-        "manual_queue": manual,
+        "report_queue": report_queue,
+        "action_queue": action_queue,
+        "manual_queue": manual_queue,
         "summary": _summary(result, assessments),
         "reason_counts": _reason_counts(assessments),
         "manual_reason_counts": _manual_reason_counts(assessments),

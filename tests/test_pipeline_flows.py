@@ -184,9 +184,8 @@ class PipelineFlowTests(unittest.TestCase):
         self.assertEqual(gate["status"], "pass")
         self.assertIn("# 채용 추천 리포트", report)
         self.assertIn("## 지원/검토", report)
-        self.assertIn("## 제외", report)
-        self.assertNotIn("https://jobs.example.test/apply-ml-engineer", report)
-        self.assertNotIn("Expired ML Intern", report)
+        self.assertNotIn("## 제외", report)
+        self.assertIn("Expired ML Intern", report)
         self.assertNotIn("RAW_JD_CANARY_EXPIRED", report)
 
     def test_v2_result_is_immutable_and_retains_terminal_dispositions(self) -> None:
@@ -277,18 +276,18 @@ class PipelineFlowTests(unittest.TestCase):
             self.assertNotIn(value, public_payload)
         self.assertIn("manual_flag", public_payload)
 
-    def test_each_selected_posting_has_actionable_report_fields(self) -> None:
+    def test_each_report_posting_has_public_safe_report_fields(self) -> None:
         config = load_config(CONFIG)
         result = run_dry_run(config, date(2026, 6, 30))
         projection, report, _artifact, _gate = _materialize(result, config, "actionable")
 
-        self.assertLessEqual(len(projection["action_queue"]), config.top_n)
-        for rank, assessment in enumerate(projection["action_queue"], start=1):
-            self.assertIn(assessment["final_disposition"], {"apply", "hold"})
+        self.assertEqual(len(projection["report_queue"]), len(result.all_assessments))
+        for rank, assessment in enumerate(projection["report_queue"], start=1):
+            self.assertIn(assessment["final_disposition"], {"apply", "hold", "manual_review", "low_priority", "exclude", "expired"})
             if assessment["source_url"] is not None:
                 self.assertIn(assessment["source_url"], report)
             self.assertIn(f"| {rank} |", report)
-            self.assertIn(f"| {assessment['score']} |", report)
+            self.assertNotIn(f"| {assessment['score']} |", report)
     def test_source_errors_are_fixed_safe_codes_before_gate_projection(self) -> None:
         config = load_config(CONFIG)
         result = build_pipeline_result_v2(

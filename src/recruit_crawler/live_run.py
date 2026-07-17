@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import ExitStack
 import inspect
 import json
 import socket
@@ -24,6 +25,24 @@ from .report_writer import (
 )
 from .schemas import PipelineResultV4, ReportArtifactV2
 from .summarizer import render_report_v2
+from .scheduled import (
+    _gate_outcome_is_durable,
+    _rollback_report,
+    _write_gate_output_at_service_boundary,
+    _scheduled_output_locks,
+)
+
+def _report_path(config, run_date: date) -> Path:
+    return Path(config.output_dir) / f"recruiting-live-run-{run_date.isoformat()}.md"
+
+
+def _capture_report_preimage(path: Path) -> tuple[bool, bytes | None]:
+    try:
+        if not path.exists():
+            return False, None
+        return True, path.read_bytes()
+    except OSError as exc:
+        raise OSError("live report preimage unreadable") from exc
 
 def _build_live_gate(
     result: PipelineResultV4,
@@ -231,6 +250,7 @@ def handle_live_run(
         command_mode="live-run",
         monotonic=time.monotonic,
     )
+    output_locks = ExitStack()
     try:
         run_date = _parse_date(args.run_date)
         config = load_config_with_context(
@@ -254,6 +274,23 @@ def handle_live_run(
         if runtime_context.expired and preflight["status"] != "fail":
             preflight = _live_failure_gate(preflight, "live preflight deadline exceeded")
         artifact = false_report_artifact()
+        report_path = _report_path(config, run_date)
+        report_preimage = None
+        preimage_error = False
+        report_published = False
+        report_unknown = False
+        gate_output_written = False
+        if args.quality_gate_output:
+            output_locks.enter_context(
+                _scheduled_output_locks(
+                    (report_path, args.quality_gate_output),
+                    runtime_context=runtime_context,
+                )
+            )
+            try:
+                report_preimage = _capture_report_preimage(report_path)
+            except OSError:
+                preimage_error = True
         gate = preflight
         result = None
         if preflight["status"] != "fail":
@@ -299,7 +336,20 @@ def handle_live_run(
                     projection=projection,
                     configured_canaries=configured_canaries,
                 )
-                if rendered is None:
+                if preimage_error:
+                    rendered = None
+                    candidate_gate = _build_live_gate(
+                        result,
+                        enabled_source_ids=(
+                            source.source_id for source in config.sources if source.enabled
+                        ),
+                        context_status=preflight["context_status"],
+                        runtime_failures=("live_report_preimage_unreadable",),
+                        report_artifact=false_report_artifact(),
+                        projection=projection,
+                        configured_canaries=configured_canaries,
+                    )
+                if rendered is None and not preimage_error:
                     candidate_gate = _build_live_gate(
                         result,
                         enabled_source_ids=(
@@ -338,6 +388,7 @@ def handle_live_run(
                         runtime_context=runtime_context,
                     )
                     if publication.durability == "published":
+                        report_published = True
                         artifact = publication.artifact
                         gate = _build_live_gate(
                             result,
@@ -366,12 +417,51 @@ def handle_live_run(
                             projection=projection,
                             configured_canaries=configured_canaries,
                         )
-        if args.quality_gate_output and runtime_context.allows_normal_work():
-            args.quality_gate_output.parent.mkdir(parents=True, exist_ok=True)
-            args.quality_gate_output.write_text(
-                json.dumps(gate, ensure_ascii=False, indent=2), encoding="utf-8"
+        if args.quality_gate_output:
+            gate_outcome = _write_gate_output_at_service_boundary(
+                args.quality_gate_output,
+                gate,
+                configured_canaries=configured_canaries,
+                runtime_context=runtime_context,
             )
+            if _gate_outcome_is_durable(gate_outcome):
+                gate_output_written = True
+            elif getattr(gate_outcome, "status", None) == "uncertain":
+                # The candidate Gate may already be visible. Keep its matching
+                # report and make the transaction explicitly indeterminate.
+                report_unknown = report_published
+                gate = _live_failure_gate(
+                    gate, "live quality gate output is indeterminate"
+                )
+            else:
+                rollback_ok = True
+                if report_published:
+                    expected_identity = (
+                        artifact.rendered.content_sha256
+                        if artifact.rendered is not None
+                        else None
+                    )
+                    rollback_ok = _rollback_report(
+                        report_path,
+                        report_preimage,
+                        expected_identity,
+                        runtime_context=runtime_context,
+                    )
+                    artifact = false_report_artifact()
+                    report_published = False
+                if rollback_ok:
+                    gate = _live_failure_gate(
+                        gate, "live quality gate output failed; report rolled back"
+                    )
+                else:
+                    report_unknown = True
+                    gate = _live_failure_gate(
+                        gate,
+                        "live quality gate output failed; report publication state unknown",
+                    )
+        output_locks.close()
     except (ConfigError, ValueError, FileNotFoundError, OSError) as exc:
+        output_locks.close()
         parser.error(str(exc))
         return 2
 
@@ -387,6 +477,9 @@ def handle_live_run(
     if result is None:
         print("Live run blocked", file=diagnostic)
         print("Report written: not generated", file=diagnostic)
+    elif report_unknown:
+        print("Live run failed", file=diagnostic)
+        print("Report written: publication state unknown", file=diagnostic)
     elif not artifact.generated:
         print("Live run failed", file=diagnostic)
         print("Report written: not generated", file=diagnostic)
@@ -394,10 +487,13 @@ def handle_live_run(
         print(f"Report written: {artifact.path}", file=diagnostic)
     print(f"Live-run quality gate status: {gate['status']}", file=diagnostic)
     if args.quality_gate_output:
-        print(
-            f"Live-run quality gate written: {args.quality_gate_output}",
-            file=diagnostic,
-        )
+        if gate_output_written:
+            print(
+                f"Live-run quality gate written: {args.quality_gate_output}",
+                file=diagnostic,
+            )
+        else:
+            print("Live-run quality gate written: not generated", file=diagnostic)
     return 1 if gate["status"] != "pass" else 0
 
 

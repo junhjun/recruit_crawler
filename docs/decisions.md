@@ -28,7 +28,7 @@ Decision: Use one immutable `PipelineResultV2` as the source for public projecti
 Reason: Keeping ranking, rendering, quality checks, and persistence on one deterministic result prevents early-truncation drift and prevents raw JD, private context, military evidence details, and opaque identity material from crossing public boundaries.
 
 Current rule:
-- `top_n` and `manual_review_n` limit only rendered projection queues, never terminal assessments.
+- `top_n` and `manual_review_n` limit legacy non-report projection queues only; the public report renders every public-safe deduplicated assessment.
 - LinkedIn is manual capture-only and excluded from automatic source collection.
 - Storage is forward-only v3; valid v3 databases are read-only during initialization and scheduled persistence accepts only a validated v3 envelope.
 ## V3 Opportunity-First Report Contract
@@ -42,6 +42,15 @@ Current rule:
 - Reports use `지원 추천`, `도전 지원`, `원문 확인 필요`, and `제외`; raw codes, raw JD, private context, and military details remain non-public.
 - Clickable links require a verified canonical per-posting URL. Generic listing/search links are shown as link verification needed.
 - A Gate PASS requires a validated published report; report integrity or partial-source warnings cannot silently pass.
+## Unified Public Report Capacity
+Decision: Render every public-safe deduplicated assessment in one Korean table, bounded before Markdown materialization.
+
+Reason: Status-specific tables and presentation caps can hide valid opportunities; an unbounded renderer can exhaust resources.
+
+Current rule:
+- The table columns are `순위`, `판정`, `공고`, `회사`, `지역`, `마감`, `사유`, `링크`; labels are `지원 추천`, `도전 지원`, `원문 확인 필요`, and `제외`.
+- The shared policy permits up to `MAX_REPORT_ROWS` rows and `MAX_DEGRADATION_NOTICES` safe source notices. Within bounds nothing is truncated; an over-capacity report produces no artifact and cannot pass its Gate.
+- Public reports never expose scores, raw JD, profile/context data, military details, canaries, raw adapter exceptions, or generic/list/search/synthetic links.
 ## Jumpit Sitemap Failure Policy
 Decision: Keep Jumpit sitemap timeout handling fail-closed and defer a public-listing fallback.
 Reason: The current failure is an external sitemap response delay; an unreviewed fallback could silently omit postings or weaken link and privacy safety.
